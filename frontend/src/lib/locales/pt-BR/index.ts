@@ -986,5 +986,8 @@ export const ptBR = {
     noContent: "Adicione fontes ao caderno primeiro",
     faq: "Perguntas Frequentes",
     studyGuide: "Guia de Estudo",
+    keyInsights: "Insights Chave",
+    denseSummary: "Resumo Denso",
+    simpleSummary: "Resumo Simples",
   },
 }

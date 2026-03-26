@@ -986,5 +986,8 @@ export const ruRU = {
     noContent: "Сначала добавьте источники в блокнот",
     faq: "Часто задаваемые вопросы",
     studyGuide: "Учебное пособие",
+    keyInsights: "Ключевые выводы",
+    denseSummary: "Плотное резюме",
+    simpleSummary: "Простое резюме",
   },
 }

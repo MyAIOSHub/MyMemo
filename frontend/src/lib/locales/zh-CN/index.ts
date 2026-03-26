@@ -986,5 +986,8 @@ export const zhCN = {
     noContent: "请先添加来源到笔记本",
     faq: "常见问题",
     studyGuide: "学习指南",
+    keyInsights: "关键洞察",
+    denseSummary: "密集摘要",
+    simpleSummary: "简单摘要",
   },
 }

@@ -986,5 +986,8 @@ export const itIT = {
     noContent: "Aggiungi prima delle fonti al quaderno",
     faq: "Domande frequenti",
     studyGuide: "Guida allo studio",
+    keyInsights: "Intuizioni chiave",
+    denseSummary: "Riassunto denso",
+    simpleSummary: "Riassunto semplice",
   },
 }

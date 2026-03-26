@@ -987,5 +987,8 @@ export const enUS = {
     noContent: "Add sources to notebook first",
     faq: "FAQ",
     studyGuide: "Study Guide",
+    keyInsights: "Key Insights",
+    denseSummary: "Dense Summary",
+    simpleSummary: "Simple Summary",
   },
 }

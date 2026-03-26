@@ -986,5 +986,8 @@ export const jaJP = {
     noContent: "先にソースをノートブックに追加してください",
     faq: "よくある質問",
     studyGuide: "学習ガイド",
+    keyInsights: "重要な洞察",
+    denseSummary: "高密度要約",
+    simpleSummary: "簡潔な要約",
   },
 }

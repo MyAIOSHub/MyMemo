@@ -1,8 +1,15 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import {
   AudioLines,
   Monitor,
@@ -17,6 +24,8 @@ import {
   Mic,
   Loader2,
   X,
+  Lightbulb,
+  BookOpen,
   LucideIcon,
 } from 'lucide-react'
 import { CollapsibleColumn, createCollapseButton } from '@/components/notebooks/CollapsibleColumn'
@@ -28,8 +37,10 @@ import { chatApi } from '@/lib/api/chat'
 import { transformationsApi } from '@/lib/api/transformations'
 import { useTransformations } from '@/lib/hooks/use-transformations'
 import { useModelDefaults } from '@/lib/hooks/use-models'
+import { ModelSelector } from '@/components/source/ModelSelector'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { MermaidDiagram } from '@/components/common/MermaidDiagram'
 import type { SourceListResponse, NoteResponse } from '@/lib/types/api'
 import type { ContextSelections } from '../[id]/page'
 
@@ -50,6 +61,9 @@ const STUDIO_ITEMS: StudioItem[] = [
   { icon: CircleHelp, labelKey: 'quiz', transformationName: 'Reflections' },
   { icon: BarChart3, labelKey: 'infographic', transformationName: 'infographic' },
   { icon: Table, labelKey: 'dataTable', transformationName: 'data-table' },
+  { icon: Lightbulb, labelKey: 'keyInsights', transformationName: 'Key Insights' },
+  { icon: BookOpen, labelKey: 'denseSummary', transformationName: 'Dense Summary' },
+  { icon: FileText, labelKey: 'simpleSummary', transformationName: 'Simple Summary' },
   { icon: Mic, labelKey: 'generatePodcast', action: 'podcast' },
 ]
 
@@ -64,10 +78,16 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
   const { t } = useTranslation()
   const { studioCollapsed, toggleStudio } = useNotebookColumnsStore()
   const [podcastDialogOpen, setPodcastDialogOpen] = useState(false)
+
+  // Confirmation dialog state
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [pendingItem, setPendingItem] = useState<StudioItem | null>(null)
+  const [selectedModel, setSelectedModel] = useState<string | undefined>(undefined)
+
+  // Generation state
   const [activeResult, setActiveResult] = useState<{ transformationName: string; output: string } | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatingItem, setGeneratingItem] = useState<string | null>(null)
-  const [selectedModel] = useState<string | null>(null)
 
   const { data: transformations } = useTransformations()
   const { data: modelDefaults } = useModelDefaults()
@@ -79,30 +99,43 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
 
   const studioTranslations: Record<string, string> = t.studio || {}
 
-  const handleItemClick = async (item: StudioItem) => {
+  // Open confirmation dialog when clicking a non-podcast card
+  const handleItemClick = (item: StudioItem) => {
     if (item.action === 'podcast') {
       setPodcastDialogOpen(true)
       return
     }
 
-    // Find matching transformation
     const transformation = transformations?.find(tr => tr.name === item.transformationName)
     if (!transformation) {
       toast.error(t.studio?.transformationNotFound || 'Transformation not found')
       return
     }
 
-    // Check if sources exist
     if (!sources || sources.length === 0) {
       toast.warning(t.studio?.noContent || 'Add sources first')
       return
     }
 
+    // Open confirm dialog
+    setPendingItem(item)
+    setSelectedModel(modelDefaults?.default_chat_model || undefined)
+    setConfirmDialogOpen(true)
+  }
+
+  // Execute after user confirms in dialog
+  const handleConfirmGenerate = useCallback(async () => {
+    if (!pendingItem) return
+
+    const transformation = transformations?.find(tr => tr.name === pendingItem.transformationName)
+    if (!transformation) return
+
+    setConfirmDialogOpen(false)
     setIsGenerating(true)
-    setGeneratingItem(item.labelKey)
+    setGeneratingItem(pendingItem.labelKey)
+
     try {
-      // Build context config from selections
-      // Default to 'full content' if no selection exists (user hasn't toggled context off)
+      // Build context
       const contextConfig: Record<string, string> = {}
       sources?.forEach(s => {
         const mode = contextSelections?.sources[s.id]
@@ -125,7 +158,6 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
         context_config: { sources: contextConfig, notes: noteConfig },
       })
 
-      // Combine context into input text
       const inputParts: string[] = []
       contextResult.context.sources?.forEach((s: Record<string, unknown>) => {
         if (s.content) inputParts.push(s.content as string)
@@ -137,28 +169,22 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
 
       if (!inputText.trim()) {
         toast.warning(t.studio?.noContent || 'No content available')
-        setIsGenerating(false)
-        setGeneratingItem(null)
         return
       }
 
-      // Resolve model
       const modelId = selectedModel || modelDefaults?.default_chat_model
       if (!modelId) {
         toast.error(t.studio?.selectModel || 'Please select a model first')
-        setIsGenerating(false)
-        setGeneratingItem(null)
         return
       }
 
-      // Execute transformation
       const result = await transformationsApi.execute({
         transformation_id: transformation.id,
         input_text: inputText,
         model_id: modelId,
       })
 
-      setActiveResult({ transformationName: item.transformationName!, output: result.output })
+      setActiveResult({ transformationName: pendingItem.transformationName!, output: result.output })
       toast.success(t.studio?.generationComplete || 'Generation complete')
     } catch (err) {
       console.error('Studio generation failed:', err)
@@ -166,14 +192,18 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
     } finally {
       setIsGenerating(false)
       setGeneratingItem(null)
+      setPendingItem(null)
     }
-  }
+  }, [pendingItem, transformations, sources, notes, contextSelections, notebookId, selectedModel, modelDefaults, t])
 
-  // Find the labelKey for the active result to display a localized title
   const activeResultLabel = activeResult
     ? studioTranslations[
         STUDIO_ITEMS.find(item => item.transformationName === activeResult.transformationName)?.labelKey || ''
       ] || activeResult.transformationName
+    : ''
+
+  const pendingItemLabel = pendingItem
+    ? studioTranslations[pendingItem.labelKey] || pendingItem.labelKey
     : ''
 
   return (
@@ -201,7 +231,6 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
                 const label = studioTranslations[item.labelKey] || item.labelKey
                 const isPodcast = item.action === 'podcast'
                 const isItemGenerating = isGenerating && generatingItem === item.labelKey
-                // Check if this card has a matching transformation in the database
                 const hasTransformation = isPodcast || (item.transformationName && transformations?.some(tr => tr.name === item.transformationName))
                 const isAvailable = hasTransformation === true
                 return (
@@ -258,14 +287,18 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
                   </Button>
                 </div>
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {activeResult.output}
-                  </ReactMarkdown>
+                  {activeResult.transformationName === 'mind-map' ? (
+                    <MermaidDiagram code={activeResult.output} />
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {activeResult.output}
+                    </ReactMarkdown>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Empty state — only show when no result and not generating */}
+            {/* Empty state */}
             {!activeResult && !isGenerating && (
               <div className="flex flex-col items-center justify-center text-center py-6 px-2">
                 <Sparkles className="h-6 w-6 text-muted-foreground/50 mb-2" />
@@ -280,6 +313,50 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
           </CardContent>
         </Card>
       </CollapsibleColumn>
+
+      {/* Confirmation dialog for non-podcast studio items */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogTitle>{pendingItemLabel}</DialogTitle>
+          <DialogDescription>
+            {t.studio?.description || 'Generate content from your sources'}
+          </DialogDescription>
+
+          <div className="space-y-4 py-2">
+            {/* Model selector */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">{t.chat?.model || 'Model'}</span>
+              <ModelSelector
+                currentModel={selectedModel}
+                onModelChange={(model) => setSelectedModel(model)}
+              />
+            </div>
+
+            {/* Source count info */}
+            <div className="text-xs text-muted-foreground">
+              {t.navigation?.sources || 'Sources'}: {sources?.filter(s => {
+                const mode = contextSelections?.sources[s.id]
+                return mode !== 'off'
+              }).length || 0}
+              {' | '}
+              {t.common?.notes || 'Notes'}: {notes?.filter(n => {
+                const mode = contextSelections?.notes[n.id]
+                return mode !== 'off'
+              }).length || 0}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+              {t.common?.cancel || 'Cancel'}
+            </Button>
+            <Button onClick={handleConfirmGenerate} disabled={!selectedModel}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              {t.studio?.generate || 'Generate'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Podcast generation dialog */}
       <GeneratePodcastDialog

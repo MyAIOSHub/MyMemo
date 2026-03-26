@@ -987,5 +987,8 @@ export const bnIN = {
     noContent: "প্রথমে নোটবুকে সোর্স যোগ করুন",
     faq: "সচরাচর জিজ্ঞাসা",
     studyGuide: "অধ্যয়ন গাইড",
+    keyInsights: "মূল অন্তর্দৃষ্টি",
+    denseSummary: "ঘন সারাংশ",
+    simpleSummary: "সরল সারাংশ",
   },
 }

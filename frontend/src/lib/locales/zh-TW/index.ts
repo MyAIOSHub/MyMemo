@@ -986,5 +986,8 @@ export const zhTW = {
     noContent: "請先添加來源到筆記本",
     faq: "常見問題",
     studyGuide: "學習指南",
+    keyInsights: "關鍵洞察",
+    denseSummary: "密集摘要",
+    simpleSummary: "簡單摘要",
   },
 }

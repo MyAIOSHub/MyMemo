@@ -986,5 +986,8 @@ export const frFR = {
     noContent: "Ajoutez d'abord des sources au carnet",
     faq: "Questions fréquentes",
     studyGuide: "Guide d'étude",
+    keyInsights: "Points clés",
+    denseSummary: "Résumé dense",
+    simpleSummary: "Résumé simple",
   },
 }
