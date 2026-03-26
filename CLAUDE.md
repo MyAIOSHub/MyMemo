@@ -25,21 +25,25 @@ This file provides architectural guidance for contributors working on Open Noteb
 ┌────────────────────────▼────────────────────────────────┐
 │              API (FastAPI)                              │
 │              api/ @ port 5055                           │
+│              + /memories/* proxy endpoints               │
 ├─────────────────────────────────────────────────────────┤
 │ - REST endpoints for notebooks, sources, notes, chat    │
 │ - LangGraph workflow orchestration                      │
 │ - Job queue for async operations (podcasts)             │
 │ - Multi-provider AI provisioning via Esperanto          │
-└────────────────────────┬────────────────────────────────┘
-                         │ SurrealQL
-┌────────────────────────▼────────────────────────────────┐
-│         Database (SurrealDB)                            │
-│         Graph database @ port 8000                      │
-├─────────────────────────────────────────────────────────┤
-│ - Records: Notebook, Source, Note, ChatSession, Credential│
-│ - Relationships: source-to-notebook, note-to-source     │
-│ - Vector embeddings for semantic search                 │
-└─────────────────────────────────────────────────────────┘
+│ - Memory Hub proxy for EverMemOS integration            │
+└──────────┬─────────────────────────┬────────────────────┘
+           │ SurrealQL               │ HTTP REST
+┌──────────▼──────────────┐  ┌──────▼──────────────────────┐
+│   Database (SurrealDB)  │  │  Memory Hub (Optional)       │
+│   Graph DB @ port 8000  │  │  EverMemOS @ port 1995       │
+├─────────────────────────┤  ├──────────────────────────────┤
+│ - Notebook, Source,     │  │ - EverMemOS memory storage   │
+│   Note, ChatSession,   │  │ - MyAttention attention data  │
+│   Credential records    │  │ - CCHistory context history   │
+│ - Graph relationships   │  │ - Browse/search/import       │
+│ - Vector embeddings     │  │   memories as Sources        │
+└─────────────────────────┘  └──────────────────────────────┘
 ```
 
 ---
@@ -79,6 +83,7 @@ User documentation is at @docs/
 - **Prompts**: AI-Prompter with Jinja2 templating
 - **Podcast Generation**: podcast-creator library
 - **Embeddings**: Multi-provider via Esperanto
+- **Memory Hub** (optional): EverMemOS integration for importing personal memories as Sources. Comprises three sub-services: EverMemOS (memory storage), MyAttention (attention data), and CCHistory (context history). Connected via `MEMORY_HUB_URL` (default `http://localhost:1995`). When Memory Hub is not running, memory features are automatically hidden in the UI.
 
 ---
 
@@ -155,6 +160,7 @@ See dedicated CLAUDE.md files for detailed guidance:
 - **[open_notebook/ai/CLAUDE.md](open_notebook/ai/CLAUDE.md)**: ModelManager, AI provider integration, Esperanto usage
 - **[open_notebook/graphs/CLAUDE.md](open_notebook/graphs/CLAUDE.md)**: LangGraph workflow design, state machines
 - **[open_notebook/database/CLAUDE.md](open_notebook/database/CLAUDE.md)**: SurrealDB operations, migrations, async patterns
+- **Memory Hub integration**: `api/routers/memories.py` (proxy endpoints), `api/memory_service.py` (EverMemOS HTTP client), `api/memory_import_service.py` (memory-to-Source import with dedup and vectorization)
 
 ---
 
@@ -199,6 +205,15 @@ See dedicated CLAUDE.md files for detailed guidance:
 2. Write SurrealQL schema changes
 3. Create `migrations/XXX_description_down.surql` (optional rollback)
 4. API auto-detects on startup; migration runs if newer than recorded version
+
+### Import Memories as Sources
+1. Ensure Memory Hub is running at the URL specified by `MEMORY_HUB_URL` (default `http://localhost:1995`)
+2. Check connectivity via `GET /memories/status` endpoint
+3. Browse available memories via `GET /memories/browse` (supports filtering by memory_type, group, date range)
+4. Search memories semantically via `POST /memories/search`
+5. Import selected memories into a notebook via `POST /memories/import` with notebook_id and memory IDs
+6. Imported memories become standard Sources with `memory_ref` metadata linking back to EverMemOS
+7. Once imported, memories participate in chat, search, transformation, and podcast workflows like any other Source
 
 ### Deploy to Production
 1. Review [CONFIGURATION.md](CONFIGURATION.md) for security settings

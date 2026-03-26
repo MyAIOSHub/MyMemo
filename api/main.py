@@ -33,6 +33,7 @@ from api.routers import (
     episode_profiles,
     insights,
     languages,
+    memories,
     models,
     notebooks,
     notes,
@@ -112,7 +113,10 @@ async def lifespan(app: FastAPI):
     # Yield control to the application
     yield
 
-    # Shutdown: cleanup if needed
+    # Shutdown: cleanup resources
+    from api.memory_service import memory_service
+
+    await memory_service.close()
     logger.info("API shutdown complete")
 
 
@@ -280,6 +284,7 @@ app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(source_chat.router, prefix="/api", tags=["source-chat"])
 app.include_router(credentials.router, prefix="/api", tags=["credentials"])
 app.include_router(languages.router, prefix="/api", tags=["languages"])
+app.include_router(memories.router, prefix="/api", tags=["memories"])
 
 
 @app.get("/")

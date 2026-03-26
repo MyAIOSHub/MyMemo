@@ -45,6 +45,8 @@ FastAPI application serving three architectural layers: routes (HTTP endpoints),
 - **episode_profiles_service.py**: CRUD for EpisodeProfile and SpeakerProfile models
 - **insights_service.py**: Generates and retrieves source insights
 - **notes_service.py**: Creates notes linked to sources/insights
+- **memory_service.py**: EverMemOS HTTP client using httpx.AsyncClient connection pool; proxies status/browse/search requests to Memory Hub (`MEMORY_HUB_URL`)
+- **memory_import_service.py**: Imports EverMemOS memories as Sources into a notebook; performs dedup checking (by memory_ref.memory_id) and triggers vectorization on imported Sources
 
 ### Models (Schemas)
 - **models.py**: Pydantic schemas for request/response validation
@@ -65,6 +67,7 @@ FastAPI application serving three architectural layers: routes (HTTP endpoints),
 - **routers/auth.py**: POST /auth/password (password-based auth)
 - **routers/languages.py**: GET /languages (available podcast languages via pycountry+babel)
 - **routers/commands.py**: GET /commands/{command_id} (job status tracking)
+- **routers/memories.py**: Memory Hub proxy endpoints (GET /memories/status, GET /memories/browse, POST /memories/search, POST /memories/import) — proxies requests to EverMemOS via memory_service; import endpoint uses memory_import_service to create Sources
 
 ## Common Patterns
 

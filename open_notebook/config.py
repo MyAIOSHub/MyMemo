@@ -18,3 +18,7 @@ os.makedirs(UPLOADS_FOLDER, exist_ok=True)
 # pre-baked encoding baked into the image at build time).
 TIKTOKEN_CACHE_DIR = os.environ.get("TIKTOKEN_CACHE_DIR", "").strip() or f"{DATA_FOLDER}/tiktoken-cache"
 os.makedirs(TIKTOKEN_CACHE_DIR, exist_ok=True)
+
+# MEMORY HUB
+MEMORY_HUB_URL = os.environ.get("MEMORY_HUB_URL", "http://localhost:1995")
+MEMORY_HUB_USER_ID = os.environ.get("MEMORY_HUB_USER_ID", "mymemo_user")

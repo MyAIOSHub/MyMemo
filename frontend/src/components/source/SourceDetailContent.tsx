@@ -60,6 +60,9 @@ import {
   Database,
   AlertCircle,
   MessageSquare,
+  Brain,
+  Globe,
+  Terminal,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { getDateLocale } from '@/lib/utils/date-locale'
@@ -744,6 +747,47 @@ export function SourceDetailContent({
                           {t.sources.fileUnavailableDesc}
                         </p>
                       ) : null}
+                    </div>
+                  )}
+
+                  {source.asset?.memory_ref && (
+                    <div>
+                      <h3 className="mb-2 text-sm font-semibold">
+                        {t.memories?.memoryOrigin || 'Memory Origin'}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {source.asset.memory_ref.source_origin === 'browser' && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Globe className="h-3 w-3" />
+                            {t.memories?.originBrowser || 'Browser Capture'}
+                          </Badge>
+                        )}
+                        {source.asset.memory_ref.source_origin === 'claude_code' && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Terminal className="h-3 w-3" />
+                            {t.memories?.originClaudeCode || 'Claude Code'}
+                          </Badge>
+                        )}
+                        {source.asset.memory_ref.source_origin === 'evermemo' && (
+                          <Badge variant="secondary" className="gap-1">
+                            <Brain className="h-3 w-3" />
+                            {t.memories?.originEvermemo || 'EverMemo'}
+                          </Badge>
+                        )}
+                        <Badge variant="outline">
+                          {source.asset.memory_ref.memory_type}
+                        </Badge>
+                      </div>
+                      {source.asset.memory_ref.group_name && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {source.asset.memory_ref.group_name}
+                        </p>
+                      )}
+                      {source.asset.memory_ref.original_timestamp && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {new Date(source.asset.memory_ref.original_timestamp).toLocaleString()}
+                        </p>
+                      )}
                     </div>
                   )}
 

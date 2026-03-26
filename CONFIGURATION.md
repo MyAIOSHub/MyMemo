@@ -34,3 +34,16 @@ The new configuration documentation includes:
 ---
 
 For all configuration details, see **[docs/5-CONFIGURATION/](docs/5-CONFIGURATION/index.md)**.
+
+---
+
+## Memory Hub Integration (Optional)
+
+Memory Hub connects Open Notebook to EverMemOS, allowing users to browse, search, and import personal memories as Sources.
+
+| Variable | Required? | Default | Description |
+|----------|-----------|---------|-------------|
+| `MEMORY_HUB_URL` | No | `http://localhost:1995` | Memory Hub service address for connecting to EverMemOS |
+| `MEMORY_HUB_USER_ID` | No | `mymemo_user` | EverMemOS user ID used for querying and importing memories |
+
+**Note**: Memory Hub is an optional service. When it is not running or unreachable, memory-related features are automatically hidden in the UI. No configuration is needed if you do not use Memory Hub.

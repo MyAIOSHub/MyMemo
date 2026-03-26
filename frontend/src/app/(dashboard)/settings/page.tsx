@@ -2,6 +2,7 @@
 
 import { AppShell } from '@/components/layout/AppShell'
 import { SettingsForm } from './components/SettingsForm'
+import { MemoryHubCard } from './components/MemoryHubCard'
 import { useSettings } from '@/lib/hooks/use-settings'
 import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-react'
@@ -24,6 +25,10 @@ export default function SettingsPage() {
             </div>
 
             <SettingsForm />
+
+            <div className="mt-6">
+              <MemoryHubCard />
+            </div>
           </div>
         </div>
       </div>

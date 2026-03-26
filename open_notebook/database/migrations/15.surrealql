@@ -1,0 +1,16 @@
+-- Migration 15: Add memory_ref support to Source asset
+-- Allows Source records to store EverMemOS memory references
+-- for memory-backed sources (browser captures, Claude Code history, EverMemo)
+
+-- Add memory_ref as flexible object field on source asset
+DEFINE FIELD IF NOT EXISTS asset.memory_ref ON TABLE source TYPE option<object>;
+DEFINE FIELD IF NOT EXISTS asset.memory_ref.memory_id ON TABLE source TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS asset.memory_ref.memory_type ON TABLE source TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS asset.memory_ref.user_id ON TABLE source TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS asset.memory_ref.source_origin ON TABLE source TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS asset.memory_ref.group_id ON TABLE source TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS asset.memory_ref.group_name ON TABLE source TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS asset.memory_ref.original_timestamp ON TABLE source TYPE option<string>;
+
+-- Index for dedup lookups: find sources by memory_id
+DEFINE INDEX IF NOT EXISTS idx_source_memory_id ON TABLE source FIELDS asset.memory_ref.memory_id;

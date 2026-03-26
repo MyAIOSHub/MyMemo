@@ -139,3 +139,16 @@ specs/
 
 *.local.yml
 **/*.local.md
+
+# Memory Hub
+memory-hub.env
+data/local-store/
+data/cchistory/
+EverMemOS/
+MyAttention-local-store/
+cchistory/
+gateway/
+
+# Desktop build artifacts
+desktop/dist/
+desktop/node_modules/

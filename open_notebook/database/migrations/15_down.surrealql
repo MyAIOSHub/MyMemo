@@ -1,0 +1,4 @@
+-- Rollback Migration 15: Remove memory_ref from source asset
+
+REMOVE INDEX IF EXISTS idx_source_memory_id ON TABLE source;
+REMOVE FIELD IF EXISTS asset.memory_ref ON TABLE source;

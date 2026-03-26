@@ -25,6 +25,15 @@ export interface SourceListResponse {
   asset: {
     file_path?: string
     url?: string
+    memory_ref?: {
+      memory_id: string
+      memory_type: string
+      user_id?: string
+      source_origin: string
+      group_id?: string
+      group_name?: string
+      original_timestamp?: string
+    }
   } | null
   embedded: boolean
   embedded_chunks: number            // ADD: From Python API

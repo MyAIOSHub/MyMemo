@@ -10,11 +10,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Plus, FileText, Link2, ChevronDown, Loader2 } from 'lucide-react'
+import { Plus, FileText, Link2, ChevronDown, Loader2, Brain } from 'lucide-react'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
 import { AddSourceDialog } from '@/components/sources/AddSourceDialog'
 import { AddExistingSourceDialog } from '@/components/sources/AddExistingSourceDialog'
+import { MemoryBrowser } from '@/components/source/MemoryBrowser'
+import { useMemoryHubStatus } from '@/lib/hooks/use-memories'
 import { SourceCard } from '@/components/sources/SourceCard'
 import { useDeleteSource, useRetrySource, useRemoveSourceFromNotebook } from '@/lib/hooks/use-sources'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
@@ -57,8 +59,10 @@ export function SourcesColumn({
   const [sourceToDelete, setSourceToDelete] = useState<string | null>(null)
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false)
   const [sourceToRemove, setSourceToRemove] = useState<string | null>(null)
+  const [memoryBrowserOpen, setMemoryBrowserOpen] = useState(false)
 
   const { openModal } = useModalManager()
+  const { data: memoryHubStatus } = useMemoryHubStatus()
   const deleteSource = useDeleteSource()
   const retrySource = useRetrySource()
   const removeFromNotebook = useRemoveSourceFromNotebook()
@@ -175,6 +179,12 @@ export function SourcesColumn({
                       <Link2 className="h-4 w-4 mr-2" />
                       {t.sources.addExistingTitle}
                     </DropdownMenuItem>
+                    {memoryHubStatus?.connected && (
+                      <DropdownMenuItem onClick={() => { setDropdownOpen(false); setMemoryBrowserOpen(true); }}>
+                        <Brain className="h-4 w-4 mr-2" />
+                        {t.memories?.addFromMemory || 'Add from Memory'}
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 {collapseButton}
@@ -235,6 +245,12 @@ export function SourcesColumn({
         onOpenChange={setAddExistingDialogOpen}
         notebookId={notebookId}
         onSuccess={onRefresh}
+      />
+
+      <MemoryBrowser
+        open={memoryBrowserOpen}
+        onOpenChange={setMemoryBrowserOpen}
+        notebookId={notebookId}
       />
 
       <ConfirmDialog

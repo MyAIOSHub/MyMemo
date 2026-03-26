@@ -1,0 +1,295 @@
+services:
+  gateway:
+    image: ${GATEWAY_IMAGE:-nginx:alpine}
+    container_name: memory-hub-gateway
+    restart: unless-stopped
+    depends_on:
+      evermemos:
+        condition: service_healthy
+      local-store:
+        condition: service_healthy
+      cchistory:
+        condition: service_healthy
+    ports:
+      - "1995:1995"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./gateway/index.html:/usr/share/nginx/html/index.html:ro
+    networks:
+      - memory-hub
+
+  evermemos:
+    build:
+      context: ./EverMemOS
+      args:
+        UV_BASE_IMAGE: ${UV_BASE_IMAGE:-ghcr.io/astral-sh/uv:python3.12-bookworm-slim}
+    container_name: memory-hub-evermemos
+    restart: unless-stopped
+    command: ["uv", "run", "python", "src/run.py", "--host", "0.0.0.0", "--port", "1995"]
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "8"
+      REDIS_SSL: "false"
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: "27017"
+      MONGODB_USERNAME: admin
+      MONGODB_PASSWORD: memsys123
+      MONGODB_DATABASE: memsys
+      MONGODB_URI_PARAMS: socketTimeoutMS=15000&authSource=admin
+      MILVUS_HOST: milvus-standalone
+      MILVUS_PORT: "19530"
+      SELF_MILVUS_COLLECTION_NS: memsys
+      ES_HOST: elasticsearch
+      ES_PORT: "9200"
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-x-ai/grok-4-fast}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      ANTHROPIC_MODEL: ${LLM_MODEL:-x-ai/grok-4-fast}
+      ANTHROPIC_BASE_URL: ${LLM_BASE_URL:-https://openrouter.ai/api/v1}
+      ANTHROPIC_API_KEY: ${LLM_API_KEY:-}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.3}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-32768}
+      MEMORY_HUB_CHAT_LLM_PROVIDER: ${MEMORY_HUB_CHAT_LLM_PROVIDER:-openai}
+      MEMORY_HUB_CHAT_LLM_MODEL: ${MEMORY_HUB_CHAT_LLM_MODEL:-glm-5}
+      MEMORY_HUB_CHAT_LLM_BASE_URL: ${MEMORY_HUB_CHAT_LLM_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      MEMORY_HUB_CHAT_DISABLE_THINKING: ${MEMORY_HUB_CHAT_DISABLE_THINKING:-true}
+      MEMORY_HUB_CHAT_TEMPERATURE: ${MEMORY_HUB_CHAT_TEMPERATURE:-0.2}
+      MEMORY_HUB_CHAT_MAX_TOKENS: ${MEMORY_HUB_CHAT_MAX_TOKENS:-2048}
+      BROWSER_SYNC_ENABLED: ${BROWSER_SYNC_ENABLED:-true}
+      BROWSER_SYNC_LOCAL_STORE_BASE_URL: ${BROWSER_SYNC_LOCAL_STORE_BASE_URL:-http://local-store:37651}
+      BROWSER_SYNC_POLL_SECONDS: ${BROWSER_SYNC_POLL_SECONDS:-5}
+      BROWSER_SYNC_CONVERSATION_STABLE_SECONDS: ${BROWSER_SYNC_CONVERSATION_STABLE_SECONDS:-15}
+      BROWSER_SYNC_SNIPPET_STABLE_SECONDS: ${BROWSER_SYNC_SNIPPET_STABLE_SECONDS:-3}
+      BROWSER_SYNC_USER_ID: ${BROWSER_SYNC_USER_ID:-mymemo_user}
+      VECTORIZE_PROVIDER: ${VECTORIZE_PROVIDER:-dashscope}
+      VECTORIZE_API_KEY: ${VECTORIZE_API_KEY:-}
+      VECTORIZE_BASE_URL: ${VECTORIZE_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      VECTORIZE_MODEL: ${VECTORIZE_MODEL:-text-embedding-v4}
+      VECTORIZE_FALLBACK_PROVIDER: ${VECTORIZE_FALLBACK_PROVIDER:-none}
+      VECTORIZE_TIMEOUT: ${VECTORIZE_TIMEOUT:-30}
+      VECTORIZE_MAX_RETRIES: ${VECTORIZE_MAX_RETRIES:-3}
+      VECTORIZE_BATCH_SIZE: ${VECTORIZE_BATCH_SIZE:-10}
+      VECTORIZE_MAX_CONCURRENT: ${VECTORIZE_MAX_CONCURRENT:-5}
+      VECTORIZE_ENCODING_FORMAT: ${VECTORIZE_ENCODING_FORMAT:-float}
+      VECTORIZE_DIMENSIONS: ${VECTORIZE_DIMENSIONS:-1024}
+      RERANK_PROVIDER: ${RERANK_PROVIDER:-dashscope}
+      RERANK_API_KEY: ${RERANK_API_KEY:-}
+      RERANK_BASE_URL: ${RERANK_BASE_URL:-https://dashscope.aliyuncs.com/api/v1/services/rerank/text-rerank/text-rerank}
+      RERANK_MODEL: ${RERANK_MODEL:-qwen3-rerank}
+      RERANK_FALLBACK_PROVIDER: ${RERANK_FALLBACK_PROVIDER:-none}
+      RERANK_TIMEOUT: ${RERANK_TIMEOUT:-30}
+      RERANK_MAX_RETRIES: ${RERANK_MAX_RETRIES:-3}
+      RERANK_BATCH_SIZE: ${RERANK_BATCH_SIZE:-10}
+      RERANK_MAX_CONCURRENT: ${RERANK_MAX_CONCURRENT:-5}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      milvus-standalone:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./memory-hub.env:/app/.env:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:1995/health || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 6
+      start_period: 120s
+    networks:
+      - memory-hub
+
+  local-store:
+    build:
+      context: ./MyAttention-local-store
+      args:
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:20-bookworm-slim}
+    container_name: memory-hub-local-store
+    restart: unless-stopped
+    environment:
+      MYMEMO_HOST: 0.0.0.0
+      MYMEMO_PORT: "37651"
+      MYMEMO_DB_PATH: /data/myattention-extention.db
+      MYMEMO_PUBLIC_BASE_URL: http://127.0.0.1:1995/local-store
+    ports:
+      - "37651:37651"
+    volumes:
+      - ./data/local-store:/data
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:37651/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - memory-hub
+
+  cchistory:
+    build:
+      context: ./cchistory
+      args:
+        UV_BASE_IMAGE: ${UV_BASE_IMAGE:-ghcr.io/astral-sh/uv:python3.12-bookworm-slim}
+    container_name: memory-hub-cchistory
+    restart: unless-stopped
+    environment:
+      CCHISTORY_HOST: 0.0.0.0
+      CCHISTORY_PORT: "3000"
+      CCHISTORY_BASE_PATH: /cc
+      CCHISTORY_CLAUDE_DIR: /data/claude
+      CCHISTORY_PROJECTS_DIR: /data/claude/projects
+      CCHISTORY_STATS_CACHE: /data/claude/stats-cache.json
+      CCHISTORY_SYNC_STATE_DB: /data/cchistory/sync-state.db
+      CCHISTORY_SYNC_ENABLED: "true"
+      CCHISTORY_SYNC_INTERVAL_SECONDS: ${CCHISTORY_SYNC_INTERVAL_SECONDS:-300}
+      CCHISTORY_EVERMEMOS_BASE_URL: http://evermemos:1995
+      CCHISTORY_SYNC_USER_ID: ${CCHISTORY_SYNC_USER_ID:-mymemo_user}
+    volumes:
+      - ${HOME}/.claude:/data/claude:ro
+      - ./data/cchistory:/data/cchistory
+    depends_on:
+      evermemos:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/api/sync/status', timeout=5)\""]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    networks:
+      - memory-hub
+
+  mongodb:
+    image: ${MONGODB_IMAGE:-mongo:7.0}
+    container_name: memory-hub-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: memsys123
+      MONGO_INITDB_DATABASE: memsys
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - memory-hub
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: memory-hub-elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms1g -Xmx1g
+      bootstrap.memory_lock: "true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 6
+      start_period: 40s
+    networks:
+      - memory-hub
+
+  milvus-etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    container_name: memory-hub-milvus-etcd
+    restart: unless-stopped
+    environment:
+      ETCD_AUTO_COMPACTION_MODE: revision
+      ETCD_AUTO_COMPACTION_RETENTION: "1000"
+      ETCD_QUOTA_BACKEND_BYTES: "4294967296"
+      ETCD_SNAPSHOT_COUNT: "50000"
+    command: etcd -advertise-client-urls=http://127.0.0.1:2479 -listen-client-urls http://0.0.0.0:2479 --data-dir /etcd
+    volumes:
+      - milvus_etcd_data:/etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "--endpoints=http://127.0.0.1:2479", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - memory-hub
+
+  milvus-minio:
+    image: ${MILVUS_MINIO_IMAGE:-minio/minio:RELEASE.2023-03-20T20-16-18Z}
+    container_name: memory-hub-milvus-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    command: minio server /minio_data
+    volumes:
+      - milvus_minio_data:/minio_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - memory-hub
+
+  milvus-standalone:
+    image: ${MILVUS_IMAGE:-milvusdb/milvus:v2.5.2}
+    container_name: memory-hub-milvus-standalone
+    restart: unless-stopped
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: milvus-etcd:2479
+      MINIO_ADDRESS: milvus-minio:9000
+    volumes:
+      - milvus_data:/var/lib/milvus
+    depends_on:
+      milvus-etcd:
+        condition: service_healthy
+      milvus-minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      timeout: 20s
+      retries: 6
+      start_period: 90s
+    networks:
+      - memory-hub
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.2-alpine}
+    container_name: memory-hub-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - memory-hub
+
+volumes:
+  mongodb_data:
+  elasticsearch_data:
+  milvus_etcd_data:
+  milvus_minio_data:
+  milvus_data:
+  redis_data:
+
+networks:
+  memory-hub:
+    driver: bridge

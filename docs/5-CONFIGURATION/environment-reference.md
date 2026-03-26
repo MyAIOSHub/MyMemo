@@ -69,6 +69,17 @@ Comprehensive list of all environment variables available in Open Notebook.
 
 ---
 
+## Memory Hub (Optional)
+
+| Variable | Required? | Default | Description |
+|----------|-----------|---------|-------------|
+| `MEMORY_HUB_URL` | No | `http://localhost:1995` | Memory Hub service address for connecting to EverMemOS memory system |
+| `MEMORY_HUB_USER_ID` | No | `mymemo_user` | EverMemOS user ID used for querying and importing memories |
+
+Memory Hub is an optional external service that connects Open Notebook to EverMemOS, enabling users to browse, search, and import personal memories as Sources. When Memory Hub is not running or unreachable, memory-related features are automatically hidden in the UI.
+
+---
+
 ## Content Extraction
 
 | Variable | Required? | Default | Description |

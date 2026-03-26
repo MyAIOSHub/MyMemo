@@ -230,9 +230,21 @@ class Notebook(ObjectModel):
             raise DatabaseOperationError(f"Failed to delete notebook: {e}")
 
 
+class MemoryRef(BaseModel):
+    """Reference to an EverMemOS memory that was imported as a Source."""
+    memory_id: str
+    memory_type: Literal["episodic_memory", "event_log", "foresight"] = "episodic_memory"
+    user_id: Optional[str] = None
+    source_origin: Literal["browser", "claude_code", "evermemo"] = "evermemo"
+    group_id: Optional[str] = None
+    group_name: Optional[str] = None
+    original_timestamp: Optional[str] = None
+
+
 class Asset(BaseModel):
     file_path: Optional[str] = None
     url: Optional[str] = None
+    memory_ref: Optional[MemoryRef] = None
 
 
 class SourceEmbedding(ObjectModel):

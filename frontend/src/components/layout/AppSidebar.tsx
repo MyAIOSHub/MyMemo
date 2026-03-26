@@ -41,6 +41,7 @@ import {
   Plus,
   Wrench,
   Command,
+  Brain,
 } from 'lucide-react'
 
 const getNavigation = (t: TranslationKeys) => [
@@ -55,6 +56,7 @@ const getNavigation = (t: TranslationKeys) => [
     items: [
       { name: t.navigation.notebooks, href: '/notebooks', icon: Book },
       { name: t.navigation.askAndSearch, href: '/search', icon: Search },
+      { name: t.memories?.browseTitle || 'Memories', href: '/memories', icon: Brain },
     ],
   },
   {

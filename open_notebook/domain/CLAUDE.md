@@ -40,7 +40,12 @@ Two base classes support different persistence patterns: **ObjectModel** (mutabl
 
 - **SourceInsight, SourceEmbedding**: Derived content models
 - **ChatSession**: Conversation container with optional model_override
+- **MemoryRef**: Pydantic model representing an EverMemOS memory reference
+  - Fields: `memory_id`, `memory_type`, `source_origin`, `group_id`, `group_name`, `original_timestamp`
+  - Used to track provenance when a memory is imported as a Source
+
 - **Asset**: File/URL reference helper
+  - `memory_ref`: Optional[MemoryRef] field allowing a Source to link back to the originating EverMemOS memory. When a memory is imported, this field stores the reference metadata. Imported memories become standard Sources and automatically participate in all existing workflows (chat, search, transformation, podcast).
 
 - **Search functions**:
   - `text_search()`: Full-text keyword search

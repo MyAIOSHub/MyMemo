@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { NotebookHeader } from '../components/NotebookHeader'
-import { SourcesColumn } from '../components/SourcesColumn'
-import { NotesColumn } from '../components/NotesColumn'
+import { SourcesAndNotesColumn } from '../components/SourcesAndNotesColumn'
 import { ChatColumn } from '../components/ChatColumn'
 import { useNotebook } from '@/lib/hooks/use-notebooks'
 import { useNotebookSources } from '@/lib/hooks/use-sources'
@@ -16,7 +15,7 @@ import { useIsDesktop } from '@/lib/hooks/use-media-query'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { FileText, StickyNote, MessageSquare } from 'lucide-react'
+import { FileText, MessageSquare } from 'lucide-react'
 
 export type ContextMode = 'off' | 'insights' | 'full'
 
@@ -44,13 +43,13 @@ export default function NotebookPage() {
   const { data: notes, isLoading: notesLoading } = useNotes(notebookId)
 
   // Get collapse states for dynamic layout
-  const { sourcesCollapsed, notesCollapsed } = useNotebookColumnsStore()
+  const { sourcesCollapsed } = useNotebookColumnsStore()
 
   // Detect desktop to avoid double-mounting ChatColumn
   const isDesktop = useIsDesktop()
 
-  // Mobile tab state (Sources, Notes, or Chat)
-  const [mobileActiveTab, setMobileActiveTab] = useState<'sources' | 'notes' | 'chat'>('chat')
+  // Mobile tab state (Sources+Notes or Chat)
+  const [mobileActiveTab, setMobileActiveTab] = useState<'content' | 'chat'>('chat')
 
   // Context selection state
   const [contextSelections, setContextSelections] = useState<ContextSelections>({
@@ -68,10 +67,8 @@ export default function NotebookPage() {
           const hasInsights = source.insights_count > 0
 
           if (currentMode === undefined) {
-            // Initial setup - default based on insights availability
             newSourceSelections[source.id] = hasInsights ? 'insights' : 'full'
           } else if (currentMode === 'full' && hasInsights) {
-            // Source gained insights while in 'full' mode - auto-switch to 'insights'
             newSourceSelections[source.id] = 'insights'
           }
         })
@@ -85,9 +82,7 @@ export default function NotebookPage() {
       setContextSelections(prev => {
         const newNoteSelections = { ...prev.notes }
         notes.forEach(note => {
-          // Only set default if not already set
           if (!(note.id in newNoteSelections)) {
-            // Notes default to 'full'
             newNoteSelections[note.id] = 'full'
           }
         })
@@ -134,19 +129,15 @@ export default function NotebookPage() {
         </div>
 
         <div className="flex-1 p-6 pt-6 overflow-x-auto flex flex-col">
-          {/* Mobile: Tabbed interface - only render on mobile to avoid double-mounting */}
+          {/* Mobile: Tabbed interface */}
           {!isDesktop && (
             <>
               <div className="lg:hidden mb-4">
-                <Tabs value={mobileActiveTab} onValueChange={(value) => setMobileActiveTab(value as 'sources' | 'notes' | 'chat')}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="sources" className="gap-2">
+                <Tabs value={mobileActiveTab} onValueChange={(value) => setMobileActiveTab(value as 'content' | 'chat')}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="content" className="gap-2">
                       <FileText className="h-4 w-4" />
-                      {t.navigation.sources}
-                    </TabsTrigger>
-                    <TabsTrigger value="notes" className="gap-2">
-                      <StickyNote className="h-4 w-4" />
-                      {t.common.notes}
+                      {t.navigation.sources} & {t.common.notes}
                     </TabsTrigger>
                     <TabsTrigger value="chat" className="gap-2">
                       <MessageSquare className="h-4 w-4" />
@@ -158,27 +149,22 @@ export default function NotebookPage() {
 
               {/* Mobile: Show only active tab */}
               <div className="flex-1 overflow-hidden lg:hidden">
-                {mobileActiveTab === 'sources' && (
-                  <SourcesColumn
+                {mobileActiveTab === 'content' && (
+                  <SourcesAndNotesColumn
                     sources={sources}
-                    isLoading={sourcesLoading}
+                    sourcesLoading={sourcesLoading}
+                    notes={notes}
+                    notesLoading={notesLoading}
                     notebookId={notebookId}
                     notebookName={notebook?.name}
-                    onRefresh={refetchSources}
-                    contextSelections={contextSelections.sources}
-                    onContextModeChange={(sourceId, mode) => handleContextModeChange(sourceId, mode, 'source')}
+                    onRefreshSources={refetchSources}
+                    sourceContextSelections={contextSelections.sources}
+                    noteContextSelections={contextSelections.notes}
+                    onSourceContextModeChange={(id, mode) => handleContextModeChange(id, mode, 'source')}
+                    onNoteContextModeChange={(id, mode) => handleContextModeChange(id, mode, 'note')}
                     hasNextPage={hasNextPage}
                     isFetchingNextPage={isFetchingNextPage}
                     fetchNextPage={fetchNextPage}
-                  />
-                )}
-                {mobileActiveTab === 'notes' && (
-                  <NotesColumn
-                    notes={notes}
-                    isLoading={notesLoading}
-                    notebookId={notebookId}
-                    contextSelections={contextSelections.notes}
-                    onContextModeChange={(noteId, mode) => handleContextModeChange(noteId, mode, 'note')}
                   />
                 )}
                 {mobileActiveTab === 'chat' && (
@@ -193,45 +179,35 @@ export default function NotebookPage() {
             </>
           )}
 
-          {/* Desktop: Collapsible columns layout */}
+          {/* Desktop: Two-column layout (Sources+Notes | Chat) */}
           <div className={cn(
             'hidden lg:flex h-full min-h-0 gap-6 transition-all duration-150',
             'flex-row'
           )}>
-            {/* Sources Column */}
+            {/* Combined Sources & Notes Column */}
             <div className={cn(
               'transition-all duration-150',
-              sourcesCollapsed ? 'w-12 flex-shrink-0' : 'flex-none basis-1/3'
+              sourcesCollapsed ? 'w-12 flex-shrink-0' : 'flex-none basis-2/5'
             )}>
-              <SourcesColumn
+              <SourcesAndNotesColumn
                 sources={sources}
-                isLoading={sourcesLoading}
+                sourcesLoading={sourcesLoading}
+                notes={notes}
+                notesLoading={notesLoading}
                 notebookId={notebookId}
                 notebookName={notebook?.name}
-                onRefresh={refetchSources}
-                contextSelections={contextSelections.sources}
-                onContextModeChange={(sourceId, mode) => handleContextModeChange(sourceId, mode, 'source')}
+                onRefreshSources={refetchSources}
+                sourceContextSelections={contextSelections.sources}
+                noteContextSelections={contextSelections.notes}
+                onSourceContextModeChange={(id, mode) => handleContextModeChange(id, mode, 'source')}
+                onNoteContextModeChange={(id, mode) => handleContextModeChange(id, mode, 'note')}
                 hasNextPage={hasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
                 fetchNextPage={fetchNextPage}
               />
             </div>
 
-            {/* Notes Column */}
-            <div className={cn(
-              'transition-all duration-150',
-              notesCollapsed ? 'w-12 flex-shrink-0' : 'flex-none basis-1/3'
-            )}>
-              <NotesColumn
-                notes={notes}
-                isLoading={notesLoading}
-                notebookId={notebookId}
-                contextSelections={contextSelections.notes}
-                onContextModeChange={(noteId, mode) => handleContextModeChange(noteId, mode, 'note')}
-              />
-            </div>
-
-            {/* Chat Column - always expanded, takes remaining space */}
+            {/* Chat Column - takes remaining space */}
             <div className="transition-all duration-150 flex-1 min-w-0 lg:pr-6 lg:-mr-6">
               <ChatColumn
                 notebookId={notebookId}
