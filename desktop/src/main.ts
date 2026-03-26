@@ -125,14 +125,17 @@ async function bootstrap(): Promise<void> {
 app.whenReady().then(bootstrap)
 
 app.on('window-all-closed', () => {
+  mainWindow = null
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
 
 app.on('activate', () => {
-  if (mainWindow) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.show()
+  } else {
+    bootstrap()
   }
 })
 

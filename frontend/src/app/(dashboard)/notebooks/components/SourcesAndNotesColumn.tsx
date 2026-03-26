@@ -4,14 +4,21 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SourceListResponse, NoteResponse } from '@/lib/types/api'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Plus, FileText, StickyNote, Link2, ChevronDown, Loader2, Brain, Bot, User, MoreVertical, Trash2 } from 'lucide-react'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -34,6 +41,8 @@ import { ContextToggle } from '@/components/common/ContextToggle'
 import { formatDistanceToNow } from 'date-fns'
 import { getDateLocale } from '@/lib/utils/date-locale'
 import { useRef, useCallback, useEffect, useMemo } from 'react'
+
+type FilterType = 'all' | 'sources' | 'memories' | 'notes'
 
 interface SourcesAndNotesColumnProps {
   sources?: SourceListResponse[]
@@ -69,7 +78,7 @@ export function SourcesAndNotesColumn({
 }: SourcesAndNotesColumnProps) {
   const { t, language } = useTranslation()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'sources' | 'notes'>('sources')
+  const [filter, setFilter] = useState<FilterType>('all')
 
   // Source dialogs
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -95,7 +104,7 @@ export function SourcesAndNotesColumn({
   const deleteNote = useDeleteNote()
 
   // Collapsible
-  const { sourcesCollapsed, toggleSources } = useNotebookColumnsStore()
+  const { sourcesCollapsed, toggleSources, setSources, setStudio } = useNotebookColumnsStore()
   const collapseButton = useMemo(
     () => createCollapseButton(toggleSources, t.navigation.sources + ' & ' + t.common.notes),
     [toggleSources, t.navigation.sources, t.common.notes]
@@ -105,12 +114,12 @@ export function SourcesAndNotesColumn({
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const handleScroll = useCallback(() => {
     const container = scrollContainerRef.current
-    if (!container || !hasNextPage || isFetchingNextPage || !fetchNextPage || activeTab !== 'sources') return
+    if (!container || !hasNextPage || isFetchingNextPage || !fetchNextPage) return
     const { scrollTop, scrollHeight, clientHeight } = container
     if (scrollHeight - scrollTop - clientHeight < 200) {
       fetchNextPage()
     }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, activeTab])
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   useEffect(() => {
     const container = scrollContainerRef.current
@@ -146,8 +155,26 @@ export function SourcesAndNotesColumn({
     catch (e) { console.error('Failed to delete note:', e) }
   }
 
-  const sourceCount = sources?.length || 0
-  const noteCount = notes?.length || 0
+  // Filter logic
+  const filteredSources = useMemo(() => {
+    if (!sources) return []
+    if (filter === 'notes') return []
+    if (filter === 'sources') return sources.filter(s => !s.asset?.memory_ref)
+    if (filter === 'memories') return sources.filter(s => !!s.asset?.memory_ref)
+    return sources // 'all'
+  }, [sources, filter])
+
+  const filteredNotes = useMemo(() => {
+    if (!notes) return []
+    if (filter === 'sources' || filter === 'memories') return []
+    return notes // 'all' or 'notes'
+  }, [notes, filter])
+
+  const totalCount = (sources?.length || 0) + (notes?.length || 0)
+  const showSources = filter === 'all' || filter === 'sources' || filter === 'memories'
+  const showNotes = filter === 'all' || filter === 'notes'
+  const isLoading = (showSources && sourcesLoading) || (showNotes && notesLoading)
+  const isEmpty = filteredSources.length === 0 && filteredNotes.length === 0 && !isLoading
 
   return (
     <>
@@ -160,197 +187,166 @@ export function SourcesAndNotesColumn({
         <Card className="h-full flex flex-col flex-1 overflow-hidden">
           <CardHeader className="pb-2 flex-shrink-0">
             <div className="flex items-center justify-between gap-2">
-              {/* Tabs for switching */}
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'sources' | 'notes')}>
-                <TabsList className="h-7">
-                  <TabsTrigger value="sources" className="text-[11px] gap-1 px-2">
-                    <FileText className="h-3 w-3" />
-                    {t.navigation.sources}
-                    {sourceCount > 0 && (
-                      <Badge variant="secondary" className="h-3.5 px-1 text-[9px] ml-0.5">{sourceCount}</Badge>
-                    )}
-                  </TabsTrigger>
-                  <TabsTrigger value="notes" className="text-[11px] gap-1 px-2">
-                    <StickyNote className="h-3 w-3" />
-                    {t.common.notes}
-                    {noteCount > 0 && (
-                      <Badge variant="secondary" className="h-3.5 px-1 text-[9px] ml-0.5">{noteCount}</Badge>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              {/* Filter dropdown */}
+              <div className="flex items-center gap-2">
+                <Select value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
+                  <SelectTrigger className="h-7 text-[11px] w-auto min-w-[80px] px-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t.common.filterAll}</SelectItem>
+                    <SelectItem value="sources">{t.common.filterSources}</SelectItem>
+                    <SelectItem value="memories">{t.common.filterMemories}</SelectItem>
+                    <SelectItem value="notes">{t.common.filterNotes}</SelectItem>
+                  </SelectContent>
+                </Select>
+                {totalCount > 0 && (
+                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">{totalCount}</Badge>
+                )}
+              </div>
 
               <div className="flex items-center gap-1">
-                {/* Action button changes based on active tab */}
-                {activeTab === 'sources' ? (
-                  <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="outline" className="h-6 text-[11px] px-2">
-                        <Plus className="h-3 w-3 mr-0.5" />
-                        {t.sources.addSource}
-                        <ChevronDown className="h-2.5 w-2.5 ml-0.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setDropdownOpen(false); setAddDialogOpen(true) }}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t.sources.addSource}
+                {/* Unified Add dropdown */}
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="h-6 text-[11px] px-2">
+                      <Plus className="h-3 w-3 mr-0.5" />
+                      {t.common.create}
+                      <ChevronDown className="h-2.5 w-2.5 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => { setDropdownOpen(false); setAddDialogOpen(true) }}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t.sources.addSource}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setDropdownOpen(false); router.push(`/sources?from=${notebookId}`) }}>
+                      <Link2 className="h-4 w-4 mr-2" />
+                      {t.sources.addExistingTitle}
+                    </DropdownMenuItem>
+                    {memoryHubStatus?.connected && (
+                      <DropdownMenuItem onClick={() => { setDropdownOpen(false); router.push(`/sources?tab=memories&from=${notebookId}`) }}>
+                        <Brain className="h-4 w-4 mr-2" />
+                        {t.memories?.addFromMemory || 'Add from Memory'}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setDropdownOpen(false); router.push(`/sources?from=${notebookId}`) }}>
-                        <Link2 className="h-4 w-4 mr-2" />
-                        {t.sources.addExistingTitle}
-                      </DropdownMenuItem>
-                      {memoryHubStatus?.connected && (
-                        <DropdownMenuItem onClick={() => { setDropdownOpen(false); router.push(`/sources?tab=memories&from=${notebookId}`) }}>
-                          <Brain className="h-4 w-4 mr-2" />
-                          {t.memories?.addFromMemory || 'Add from Memory'}
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-6 text-[11px] px-2"
-                    onClick={() => { setEditingNote(null); setShowAddNoteDialog(true) }}
-                  >
-                    <Plus className="h-3 w-3 mr-0.5" />
-                    {t.common.writeNote}
-                  </Button>
-                )}
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => { setDropdownOpen(false); setEditingNote(null); setShowAddNoteDialog(true); setSources(false); setStudio(true) }}>
+                      <StickyNote className="h-4 w-4 mr-2" />
+                      {t.common.writeNote}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 {collapseButton}
               </div>
             </div>
           </CardHeader>
 
           <CardContent ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0">
-            {/* Sources Tab Content */}
-            {activeTab === 'sources' && (
-              <>
-                {sourcesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <LoadingSpinner />
-                  </div>
-                ) : !sources || sources.length === 0 ? (
-                  <EmptyState
-                    icon={FileText}
-                    title={t.sources.noSourcesYet}
-                    description={t.sources.createFirstSource}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : isEmpty ? (
+              <EmptyState
+                icon={filter === 'notes' ? StickyNote : FileText}
+                title={filter === 'notes' ? t.notebooks.noNotesYet : t.sources.noSourcesYet}
+                description={filter === 'notes' ? t.sources.createFirstNote : t.sources.createFirstSource}
+              />
+            ) : (
+              <div className="space-y-3">
+                {/* Sources */}
+                {filteredSources.map((source) => (
+                  <SourceCard
+                    key={source.id}
+                    source={source}
+                    onClick={handleSourceClick}
+                    onDelete={handleDeleteSourceClick}
+                    onRetry={handleRetry}
+                    onRemoveFromNotebook={handleRemoveFromNotebook}
+                    onRefresh={onRefreshSources}
+                    showRemoveFromNotebook={true}
+                    contextMode={sourceContextSelections?.[source.id]}
+                    onContextModeChange={onSourceContextModeChange
+                      ? (mode) => onSourceContextModeChange(source.id, mode)
+                      : undefined
+                    }
                   />
-                ) : (
-                  <div className="space-y-3">
-                    {sources.map((source) => (
-                      <SourceCard
-                        key={source.id}
-                        source={source}
-                        onClick={handleSourceClick}
-                        onDelete={handleDeleteSourceClick}
-                        onRetry={handleRetry}
-                        onRemoveFromNotebook={handleRemoveFromNotebook}
-                        onRefresh={onRefreshSources}
-                        showRemoveFromNotebook={true}
-                        contextMode={sourceContextSelections?.[source.id]}
-                        onContextModeChange={onSourceContextModeChange
-                          ? (mode) => onSourceContextModeChange(source.id, mode)
-                          : undefined
-                        }
-                      />
-                    ))}
-                    {isFetchingNextPage && (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ))}
+                {isFetchingNextPage && (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+
+                {/* Notes */}
+                {filteredNotes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="p-3 border rounded-lg card-hover group relative cursor-pointer"
+                    onClick={() => setEditingNote(note)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {note.note_type === 'ai' ? (
+                          <Bot className="h-4 w-4 text-primary" />
+                        ) : (
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <Badge variant="secondary" className="text-xs">
+                          {note.note_type === 'ai' ? t.common.aiGenerated : t.common.human}
+                        </Badge>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(note.updated), {
+                            addSuffix: true,
+                            locale: getDateLocale(language)
+                          })}
+                        </span>
+                        {onNoteContextModeChange && noteContextSelections?.[note.id] && (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <ContextToggle
+                              mode={noteContextSelections[note.id]}
+                              hasInsights={false}
+                              onChange={(mode) => onNoteContextModeChange(note.id, mode)}
+                            />
+                          </div>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); handleDeleteNoteClick(note.id) }}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t.notebooks.deleteNote}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    {note.title && (
+                      <h4 className="text-sm font-medium mb-2 break-all">{note.title}</h4>
+                    )}
+                    {note.content && (
+                      <p className="text-sm text-muted-foreground line-clamp-3 break-all">
+                        {note.content}
+                      </p>
                     )}
                   </div>
-                )}
-              </>
-            )}
-
-            {/* Notes Tab Content */}
-            {activeTab === 'notes' && (
-              <>
-                {notesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <LoadingSpinner />
-                  </div>
-                ) : !notes || notes.length === 0 ? (
-                  <EmptyState
-                    icon={StickyNote}
-                    title={t.notebooks.noNotesYet}
-                    description={t.sources.createFirstNote}
-                  />
-                ) : (
-                  <div className="space-y-3">
-                    {notes.map((note) => (
-                      <div
-                        key={note.id}
-                        className="p-3 border rounded-lg card-hover group relative cursor-pointer"
-                        onClick={() => setEditingNote(note)}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {note.note_type === 'ai' ? (
-                              <Bot className="h-4 w-4 text-primary" />
-                            ) : (
-                              <User className="h-4 w-4 text-muted-foreground" />
-                            )}
-                            <Badge variant="secondary" className="text-xs">
-                              {note.note_type === 'ai' ? t.common.aiGenerated : t.common.human}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(note.updated), {
-                                addSuffix: true,
-                                locale: getDateLocale(language)
-                              })}
-                            </span>
-                            {onNoteContextModeChange && noteContextSelections?.[note.id] && (
-                              <div onClick={(e) => e.stopPropagation()}>
-                                <ContextToggle
-                                  mode={noteContextSelections[note.id]}
-                                  hasInsights={false}
-                                  onChange={(mode) => onNoteContextModeChange(note.id, mode)}
-                                />
-                              </div>
-                            )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteNoteClick(note.id) }}
-                                  className="text-red-600 focus:text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  {t.notebooks.deleteNote}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                        {note.title && (
-                          <h4 className="text-sm font-medium mb-2 break-all">{note.title}</h4>
-                        )}
-                        {note.content && (
-                          <p className="text-sm text-muted-foreground line-clamp-3 break-all">
-                            {note.content}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>

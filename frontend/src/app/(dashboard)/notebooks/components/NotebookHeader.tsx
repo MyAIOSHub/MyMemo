@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { NotebookResponse } from '@/lib/types/api'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Archive, ArchiveRestore, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Trash2, ArrowLeft } from 'lucide-react'
 import { useUpdateNotebook } from '@/lib/hooks/use-notebooks'
 import { NotebookDeleteDialog } from './NotebookDeleteDialog'
 import { formatDistanceToNow } from 'date-fns'
@@ -18,6 +19,7 @@ interface NotebookHeaderProps {
 
 export function NotebookHeader({ notebook }: NotebookHeaderProps) {
   const { t, language } = useTranslation()
+  const router = useRouter()
   const dfLocale = getDateLocale(language)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   
@@ -54,6 +56,15 @@ export function NotebookHeader({ notebook }: NotebookHeaderProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 flex-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/notebooks')}
+                className="h-8 w-8 p-0 flex-shrink-0"
+                aria-label={t.chat?.backToNotebooks || 'Back to Notebooks'}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
               <InlineEdit
                 id="notebook-name"
                 name="notebook-name"

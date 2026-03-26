@@ -4,9 +4,11 @@ import { useMemo, useState } from 'react'
 
 import { AppShell } from '@/components/layout/AppShell'
 import { NotebookList } from './components/NotebookList'
+import { WorksList } from './components/WorksList'
 import { Button } from '@/components/ui/button'
 import { Plus, RefreshCw } from 'lucide-react'
 import { useNotebooks } from '@/lib/hooks/use-notebooks'
+import { usePodcastEpisodes } from '@/lib/hooks/use-podcasts'
 import { CreateNotebookDialog } from '@/components/notebooks/CreateNotebookDialog'
 import { Input } from '@/components/ui/input'
 import { useTranslation } from '@/lib/hooks/use-translation'
@@ -17,6 +19,7 @@ export default function NotebooksPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const { data: notebooks, isLoading, refetch } = useNotebooks(false)
   const { data: archivedNotebooks } = useNotebooks(true)
+  const { episodes, isLoading: isLoadingEpisodes } = usePodcastEpisodes()
 
   const normalizedQuery = searchTerm.trim().toLowerCase()
 
@@ -88,8 +91,8 @@ export default function NotebooksPage() {
           />
           
           {hasArchived && (
-            <NotebookList 
-              notebooks={filteredArchived} 
+            <NotebookList
+              notebooks={filteredArchived}
               isLoading={false}
               title={t.notebooks.archivedNotebooks}
               collapsible
@@ -97,6 +100,8 @@ export default function NotebooksPage() {
               emptyDescription={isSearching ? t.common.tryDifferentSearch : undefined}
             />
           )}
+
+          <WorksList episodes={episodes} isLoading={isLoadingEpisodes} />
         </div>
         </div>
       </div>

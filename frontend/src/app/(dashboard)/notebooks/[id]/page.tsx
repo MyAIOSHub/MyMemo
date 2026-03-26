@@ -146,7 +146,7 @@ export default function NotebookPage() {
                     </TabsTrigger>
                     <TabsTrigger value="studio" className="gap-2">
                       <Sparkles className="h-4 w-4" />
-                      Studio
+                      {t.studio?.title || 'Studio'}
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -181,7 +181,12 @@ export default function NotebookPage() {
                   />
                 )}
                 {mobileActiveTab === 'studio' && (
-                  <StudioColumn notebookId={notebookId} />
+                  <StudioColumn
+                    notebookId={notebookId}
+                    sources={sources}
+                    notes={notes}
+                    contextSelections={contextSelections}
+                  />
                 )}
               </div>
             </>
@@ -230,7 +235,12 @@ export default function NotebookPage() {
               'transition-all duration-150 flex-shrink-0',
               studioCollapsed ? 'w-12' : 'w-[280px]'
             )}>
-              <StudioColumn notebookId={notebookId} />
+              <StudioColumn
+                notebookId={notebookId}
+                sources={sources}
+                notes={notes}
+                contextSelections={contextSelections}
+              />
             </div>
           </div>
         </div>

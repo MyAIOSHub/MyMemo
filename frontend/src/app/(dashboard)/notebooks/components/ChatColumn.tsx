@@ -8,14 +8,12 @@ import { useModelDefaults } from '@/lib/hooks/use-models'
 import { ChatPanel } from '@/components/source/ChatPanel'
 import { StreamingResponse } from '@/components/search/StreamingResponse'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
-import { AlertCircle, Bot, MessageSquare, Globe, Send } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { AlertCircle } from 'lucide-react'
 import { ContextSelections } from '../[id]/page'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { SourceListResponse } from '@/lib/types/api'
+import { useNotebookColumnsStore } from '@/lib/stores/notebook-columns-store'
 
 interface ChatColumnProps {
   notebookId: string
@@ -27,8 +25,9 @@ interface ChatColumnProps {
 export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoading }: ChatColumnProps) {
   const { t } = useTranslation()
 
-  // Chat mode toggle
-  const [chatMode, setChatMode] = useState<'notebook' | 'global'>('notebook')
+  // Toggle states for input area
+  const [isGlobalAsk, setIsGlobalAsk] = useState(false)
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false)
 
   // Fetch notes for this notebook
   const { data: notes = [], isLoading: notesLoading } = useNotes(notebookId)
@@ -44,17 +43,30 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
   // Global Ask state
   const ask = useAsk()
   const { data: modelDefaults } = useModelDefaults()
-  const [askQuestion, setAskQuestion] = useState('')
 
-  const handleAsk = useCallback(() => {
-    if (!askQuestion.trim() || !modelDefaults?.default_chat_model) return
+  // Column store for auto-collapse
+  const { setSources, setStudio } = useNotebookColumnsStore()
 
-    ask.sendAsk(askQuestion, {
-      strategy: modelDefaults.default_chat_model,
-      answer: modelDefaults.default_chat_model,
-      finalAnswer: modelDefaults.default_chat_model
-    })
-  }, [askQuestion, modelDefaults, ask])
+  // Wrapped send handler with column auto-collapse
+  const handleSendMessage = useCallback((message: string, modelOverride?: string) => {
+    // Auto-collapse: collapse left, expand right when chatting
+    setSources(true)
+    setStudio(false)
+
+    if (isGlobalAsk) {
+      // Use global ask
+      if (modelDefaults?.default_chat_model) {
+        ask.sendAsk(message, {
+          strategy: modelDefaults.default_chat_model,
+          answer: modelDefaults.default_chat_model,
+          finalAnswer: modelDefaults.default_chat_model
+        })
+      }
+    } else {
+      // Use notebook chat
+      chat.sendMessage(message, modelOverride)
+    }
+  }, [isGlobalAsk, chat, ask, modelDefaults, setSources, setStudio])
 
   // Calculate context stats for indicator
   const contextStats = useMemo(() => {
@@ -115,101 +127,42 @@ export function ChatColumn({ notebookId, contextSelections, sources, sourcesLoad
 
   return (
     <div className="h-full flex flex-col min-h-0">
-      {/* Mode toggle */}
-      <div className="flex-shrink-0 mb-2">
-        <Tabs value={chatMode} onValueChange={(v) => setChatMode(v as 'notebook' | 'global')}>
-          <TabsList className="h-8 w-full">
-            <TabsTrigger value="notebook" className="text-xs gap-1.5 flex-1">
-              <MessageSquare className="h-3.5 w-3.5" />
-              {t.chat?.notebookChat || 'Notebook Chat'}
-            </TabsTrigger>
-            <TabsTrigger value="global" className="text-xs gap-1.5 flex-1">
-              <Globe className="h-3.5 w-3.5" />
-              {t.chat?.globalAsk || 'Global Ask'}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {/* Notebook Chat mode */}
-      <div className={chatMode === 'notebook' ? 'flex-1 min-h-0' : 'hidden'}>
+      {/* Unified chat — no tabs */}
+      <div className="flex-1 min-h-0">
         <ChatPanel
-          title={t.chat.chatWithNotebook}
+          title={isGlobalAsk
+            ? (t.chat?.globalAsk || 'Global Ask')
+            : t.chat.chatWithNotebook
+          }
           contextType="notebook"
-          messages={chat.messages}
-          isStreaming={chat.isSending}
+          messages={isGlobalAsk ? [] : chat.messages}
+          isStreaming={isGlobalAsk ? ask.isStreaming : chat.isSending}
           contextIndicators={null}
-          onSendMessage={(message, modelOverride) => chat.sendMessage(message, modelOverride)}
+          onSendMessage={handleSendMessage}
           modelOverride={chat.currentSession?.model_override ?? chat.pendingModelOverride ?? undefined}
           onModelChange={(model) => chat.setModelOverride(model ?? null)}
-          sessions={chat.sessions}
-          currentSessionId={chat.currentSessionId}
-          onCreateSession={(title) => chat.createSession(title)}
-          onSelectSession={chat.switchSession}
-          onUpdateSession={(sessionId, title) => chat.updateSession(sessionId, { title })}
-          onDeleteSession={chat.deleteSession}
-          loadingSessions={chat.loadingSessions}
-          notebookContextStats={contextStats}
+          sessions={isGlobalAsk ? [] : chat.sessions}
+          currentSessionId={isGlobalAsk ? null : chat.currentSessionId}
+          onCreateSession={isGlobalAsk ? undefined : (title) => chat.createSession(title)}
+          onSelectSession={isGlobalAsk ? undefined : chat.switchSession}
+          onUpdateSession={isGlobalAsk ? undefined : (sessionId, title) => chat.updateSession(sessionId, { title })}
+          onDeleteSession={isGlobalAsk ? undefined : chat.deleteSession}
+          loadingSessions={isGlobalAsk ? false : chat.loadingSessions}
+          notebookContextStats={isGlobalAsk ? undefined : contextStats}
           notebookId={notebookId}
+          // Toggle props
+          isGlobalAsk={isGlobalAsk}
+          onToggleGlobalAsk={setIsGlobalAsk}
+          webSearchEnabled={webSearchEnabled}
+          onToggleWebSearch={setWebSearchEnabled}
+          // Global ask streaming response
+          globalAskResponse={isGlobalAsk ? {
+            isStreaming: ask.isStreaming,
+            strategy: ask.strategy,
+            answers: ask.answers,
+            finalAnswer: ask.finalAnswer
+          } : undefined}
         />
-      </div>
-
-      {/* Global Ask mode */}
-      <div className={chatMode === 'global' ? 'flex-1 min-h-0 flex flex-col' : 'hidden'}>
-        <Card className="h-full flex flex-col">
-          <CardHeader className="pb-2 flex-shrink-0">
-            <p className="text-xs text-muted-foreground">
-              {t.chat?.globalAskDesc || 'Search across all your knowledge base'}
-            </p>
-            {modelDefaults?.default_chat_model && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Bot className="h-3 w-3" />
-                <span>{modelDefaults.default_chat_model}</span>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent className="flex-1 overflow-y-auto min-h-0 flex flex-col">
-            {/* Question input */}
-            <div className="flex gap-2 mb-4 flex-shrink-0">
-              <Textarea
-                placeholder={t.searchPage?.enterQuestionPlaceholder || 'Enter your question...'}
-                value={askQuestion}
-                onChange={(e) => setAskQuestion(e.target.value)}
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !ask.isStreaming && askQuestion.trim()) {
-                    e.preventDefault()
-                    handleAsk()
-                  }
-                }}
-                disabled={ask.isStreaming}
-                rows={2}
-                className="flex-1 resize-none text-sm"
-              />
-              <Button
-                size="icon"
-                onClick={handleAsk}
-                disabled={ask.isStreaming || !askQuestion.trim() || !modelDefaults?.default_chat_model}
-                className="h-auto self-end"
-              >
-                {ask.isStreaming ? (
-                  <LoadingSpinner size="sm" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-
-            {/* Streaming response */}
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <StreamingResponse
-                isStreaming={ask.isStreaming}
-                strategy={ask.strategy}
-                answers={ask.answers}
-                finalAnswer={ask.finalAnswer}
-              />
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

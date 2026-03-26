@@ -22,8 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ThemeToggle } from '@/components/common/ThemeToggle'
-import { LanguageToggle } from '@/components/common/LanguageToggle'
 import { TranslationKeys } from '@/lib/locales'
 import { useTranslation } from '@/lib/hooks/use-translation'
 import { Separator } from '@/components/ui/separator'
@@ -31,7 +29,6 @@ import {
   Book,
   Mic,
   Settings,
-  LogOut,
   ChevronLeft,
   Menu,
   FileText,
@@ -60,7 +57,7 @@ export function AppSidebar() {
   const { t } = useTranslation()
   const navigation = getNavigation(t)
   const pathname = usePathname()
-  const { logout } = useAuth()
+  useAuth()
   const { isCollapsed, toggleCollapse } = useSidebarStore()
   const { openSourceDialog, openNotebookDialog, openPodcastDialog } = useCreateDialogs()
 
@@ -272,17 +269,12 @@ export function AppSidebar() {
           ))}
         </nav>
 
-        <div
-          className={cn(
-            'border-t border-sidebar-border p-3 space-y-2',
-            isCollapsed && 'px-2'
-          )}
-        >
-          {/* Command Palette hint */}
-          {!isCollapsed && (
+        {!isCollapsed && (
+          <div className="border-t border-sidebar-border p-3 space-y-2">
+            {/* Command Palette hint */}
             <div className="px-3 py-1.5 text-xs text-sidebar-foreground/60">
               <div className="flex items-center justify-between">
-                 <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1.5">
                   <Command className="h-3 w-3" />
                   {t.common.quickActions}
                 </span>
@@ -290,71 +282,12 @@ export function AppSidebar() {
                   {isMac ? <span className="text-xs">⌘</span> : <span>Ctrl+</span>}K
                 </kbd>
               </div>
-               <p className="mt-1 text-[10px] text-sidebar-foreground/40">
+              <p className="mt-1 text-[10px] text-sidebar-foreground/40">
                 {t.common.quickActionsDesc}
               </p>
             </div>
-          )}
-
-           <div
-            className={cn(
-              'flex flex-col gap-2',
-              isCollapsed ? 'items-center' : 'items-stretch'
-            )}
-          >
-            {isCollapsed ? (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <ThemeToggle iconOnly />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{t.common.theme}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <LanguageToggle iconOnly />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{t.common.language}</TooltipContent>
-                </Tooltip>
-              </>
-            ) : (
-              <>
-                <ThemeToggle />
-                <LanguageToggle />
-              </>
-            )}
           </div>
-
-          {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-center sidebar-menu-item"
-                  onClick={logout}
-                  aria-label={t.common.signOut}
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-               <TooltipContent side="right">{t.common.signOut}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3 sidebar-menu-item"
-              onClick={logout}
-              aria-label={t.common.signOut}
-             >
-              <LogOut className="h-4 w-4" />
-              {t.common.signOut}
-            </Button>
-          )}
-        </div>
+        )}
       </div>
     </TooltipProvider>
   )

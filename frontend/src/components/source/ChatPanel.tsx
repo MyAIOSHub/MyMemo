@@ -7,7 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
-import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, Clock } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Bot, User, Send, Loader2, FileText, Lightbulb, StickyNote, Clock, Globe, Wifi } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
@@ -19,10 +20,12 @@ import { ModelSelector } from './ModelSelector'
 import { ContextIndicator } from '@/components/common/ContextIndicator'
 import { SessionManager } from '@/components/source/SessionManager'
 import { MessageActions } from '@/components/source/MessageActions'
+import { StreamingResponse } from '@/components/search/StreamingResponse'
 import { convertReferencesToCompactMarkdown, createCompactReferenceLinkComponent } from '@/lib/utils/source-references'
 import { useModalManager } from '@/lib/hooks/use-modal-manager'
 import { toast } from 'sonner'
 import { useTranslation } from '@/lib/hooks/use-translation'
+import { StrategyData } from '@/lib/types/search'
 
 interface NotebookContextStats {
   sourcesInsights: number
@@ -30,6 +33,13 @@ interface NotebookContextStats {
   notesCount: number
   tokenCount?: number
   charCount?: number
+}
+
+interface GlobalAskResponse {
+  isStreaming: boolean
+  strategy: StrategyData | null
+  answers: string[]
+  finalAnswer: string | null
 }
 
 interface ChatPanelProps {
@@ -54,6 +64,13 @@ interface ChatPanelProps {
   notebookContextStats?: NotebookContextStats
   // Notebook ID for saving notes
   notebookId?: string
+  // Toggle props
+  isGlobalAsk?: boolean
+  onToggleGlobalAsk?: (value: boolean) => void
+  webSearchEnabled?: boolean
+  onToggleWebSearch?: (value: boolean) => void
+  // Global ask response (rendered in scroll area when global ask is active)
+  globalAskResponse?: GlobalAskResponse
 }
 
 export function ChatPanel({
@@ -73,7 +90,12 @@ export function ChatPanel({
   title,
   contextType = 'source',
   notebookContextStats,
-  notebookId
+  notebookId,
+  isGlobalAsk,
+  onToggleGlobalAsk,
+  webSearchEnabled,
+  onToggleWebSearch,
+  globalAskResponse,
 }: ChatPanelProps) {
   const { t } = useTranslation()
   const chatInputId = useId()
@@ -88,9 +110,6 @@ export function ChatPanel({
 
     try {
       openModal(modalType, id)
-      // Note: The modal system uses URL parameters and doesn't throw errors for missing items.
-      // The modal component itself will handle displaying "not found" states.
-      // This try-catch is here for future enhancements or unexpected errors.
     } catch {
       toast.error(t.common.noResults)
     }
@@ -132,7 +151,7 @@ export function ChatPanel({
             <Bot className="h-5 w-5" />
             {title || (contextType === 'source' ? t.chat.chatWith.replace('{name}', t.navigation.sources) : t.chat.chatWith.replace('{name}', t.common.notebook))}
           </CardTitle>
-          {onSelectSession && onCreateSession && onDeleteSession && (
+          {!isGlobalAsk && onSelectSession && onCreateSession && onDeleteSession && (
             <Dialog open={sessionManagerOpen} onOpenChange={setSessionManagerOpen}>
               <Button
                 variant="ghost"
@@ -166,81 +185,104 @@ export function ChatPanel({
       <CardContent className="flex-1 flex flex-col min-h-0 p-0">
         <ScrollArea className="flex-1 min-h-0 px-4" ref={scrollAreaRef}>
           <div className="space-y-4 py-4">
-            {messages.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">
-                  {t.chat.startConversation.replace('{type}', contextType === 'source' ? t.navigation.sources : t.common.notebook)}
-                </p>
-                <p className="text-xs mt-2">{t.chat.askQuestions}</p>
-              </div>
-            ) : (
-              messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${
-                    message.type === 'human' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
-                  {message.type === 'ai' && (
+            {/* Notebook chat messages */}
+            {!isGlobalAsk && (
+              <>
+                {messages.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-sm">
+                      {t.chat.startConversation.replace('{type}', contextType === 'source' ? t.navigation.sources : t.common.notebook)}
+                    </p>
+                    <p className="text-xs mt-2">{t.chat.askQuestions}</p>
+                  </div>
+                ) : (
+                  messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex gap-3 ${
+                        message.type === 'human' ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      {message.type === 'ai' && (
+                        <div className="flex-shrink-0">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Bot className="h-4 w-4" />
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2 max-w-[80%]">
+                        <div
+                          className={`rounded-lg px-4 py-2 ${
+                            message.type === 'human'
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted'
+                          }`}
+                        >
+                          {message.type === 'ai' ? (
+                            <AIMessageContent
+                              content={message.content}
+                              onReferenceClick={handleReferenceClick}
+                            />
+                          ) : (
+                            <p className="text-sm break-all">{message.content}</p>
+                          )}
+                        </div>
+                        {message.type === 'ai' && (
+                          <MessageActions
+                            content={message.content}
+                            notebookId={notebookId}
+                          />
+                        )}
+                      </div>
+                      {message.type === 'human' && (
+                        <div className="flex-shrink-0">
+                          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                            <User className="h-4 w-4 text-primary-foreground" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+                {isStreaming && (
+                  <div className="flex gap-3 justify-start">
                     <div className="flex-shrink-0">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                         <Bot className="h-4 w-4" />
                       </div>
                     </div>
-                  )}
-                  <div className="flex flex-col gap-2 max-w-[80%]">
-                    <div
-                      className={`rounded-lg px-4 py-2 ${
-                        message.type === 'human'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      {message.type === 'ai' ? (
-                        <AIMessageContent
-                          content={message.content}
-                          onReferenceClick={handleReferenceClick}
-                        />
-                      ) : (
-                        <p className="text-sm break-all">{message.content}</p>
-                      )}
+                    <div className="rounded-lg px-4 py-2 bg-muted">
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     </div>
-                    {message.type === 'ai' && (
-                      <MessageActions
-                        content={message.content}
-                        notebookId={notebookId}
-                      />
-                    )}
                   </div>
-                  {message.type === 'human' && (
-                    <div className="flex-shrink-0">
-                      <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary-foreground" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))
+                )}
+              </>
             )}
-            {isStreaming && (
-              <div className="flex gap-3 justify-start">
-                <div className="flex-shrink-0">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Bot className="h-4 w-4" />
-                  </div>
-                </div>
-                <div className="rounded-lg px-4 py-2 bg-muted">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
+
+            {/* Global Ask streaming response */}
+            {isGlobalAsk && globalAskResponse && (
+              <StreamingResponse
+                isStreaming={globalAskResponse.isStreaming}
+                strategy={globalAskResponse.strategy}
+                answers={globalAskResponse.answers}
+                finalAnswer={globalAskResponse.finalAnswer}
+              />
+            )}
+
+            {isGlobalAsk && !globalAskResponse?.isStreaming && !globalAskResponse?.finalAnswer && (
+              <div className="text-center text-muted-foreground py-8">
+                <Globe className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">{t.chat?.globalAskDesc || 'Search across all your knowledge base'}</p>
               </div>
             )}
+
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
 
         {/* Context Indicators */}
-        {contextIndicators && (
+        {!isGlobalAsk && contextIndicators && (
           <div className="border-t px-4 py-2">
             <div className="flex flex-wrap gap-2 text-xs">
               {contextIndicators.sources?.length > 0 && (
@@ -266,7 +308,7 @@ export function ChatPanel({
         )}
 
         {/* Notebook Context Indicator */}
-        {notebookContextStats && (
+        {!isGlobalAsk && notebookContextStats && (
           <ContextIndicator
             sourcesInsights={notebookContextStats.sourcesInsights}
             sourcesFull={notebookContextStats.sourcesFull}
@@ -279,7 +321,7 @@ export function ChatPanel({
         {/* Input Area */}
         <div className="flex-shrink-0 p-4 space-y-3 border-t">
           {/* Model selector */}
-          {onModelChange && (
+          {!isGlobalAsk && onModelChange && (
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">{t.chat.model}</span>
               <ModelSelector
@@ -287,6 +329,36 @@ export function ChatPanel({
                 onModelChange={onModelChange}
                 disabled={isStreaming}
               />
+            </div>
+          )}
+
+          {/* Toggle switches */}
+          {(onToggleGlobalAsk || onToggleWebSearch) && (
+            <div className="flex items-center gap-4">
+              {onToggleGlobalAsk && (
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <Checkbox
+                    checked={isGlobalAsk}
+                    onCheckedChange={(checked) => onToggleGlobalAsk(checked === true)}
+                  />
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Globe className="h-3 w-3" />
+                    {t.chat?.globalAsk || 'Global Ask'}
+                  </span>
+                </label>
+              )}
+              {onToggleWebSearch && (
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <Checkbox
+                    checked={webSearchEnabled}
+                    onCheckedChange={(checked) => onToggleWebSearch(checked === true)}
+                  />
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Wifi className="h-3 w-3" />
+                    {t.chat?.webSearch || 'Web Search'}
+                  </span>
+                </label>
+              )}
             </div>
           )}
 
