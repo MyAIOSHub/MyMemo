@@ -155,7 +155,9 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
 
       const inputParts: string[] = []
       contextResult.context.sources?.forEach((s: Record<string, unknown>) => {
-        if (s.content) inputParts.push(s.content as string)
+        // Source.get_context returns 'full_text', Note.get_context returns 'content'
+        const text = (s.full_text || s.content || '') as string
+        if (text) inputParts.push(text)
       })
       contextResult.context.notes?.forEach((n: Record<string, unknown>) => {
         if (n.content) inputParts.push(n.content as string)
