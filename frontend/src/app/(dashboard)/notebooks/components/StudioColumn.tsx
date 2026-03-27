@@ -112,12 +112,7 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
       return
     }
 
-    if (!sources || sources.length === 0) {
-      toast.warning(t.studio?.noContent || 'Add sources first')
-      return
-    }
-
-    // Open confirm dialog
+    // Open confirm dialog (content check happens during generation)
     setPendingItem(item)
     setSelectedModel(modelDefaults?.default_chat_model || undefined)
     setConfirmDialogOpen(true)
