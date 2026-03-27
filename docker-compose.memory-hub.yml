@@ -115,8 +115,7 @@ services:
       MYMEMO_PORT: "37651"
       MYMEMO_DB_PATH: /data/myattention-extention.db
       MYMEMO_PUBLIC_BASE_URL: http://127.0.0.1:1995/local-store
-    ports:
-      - "37651:37651"
+    # Port 37651 not exposed to host — accessed via gateway at :1995/local-store/
     volumes:
       - ./data/local-store:/data
     healthcheck:

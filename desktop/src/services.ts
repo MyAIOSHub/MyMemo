@@ -13,9 +13,15 @@ export interface ServiceStatus {
 /**
  * ServiceManager handles the lifecycle of required services.
  *
- * Architecture:
- * - SurrealDB + API + Frontend: Core services, always managed by Electron
- * - Memory Hub: OPTIONAL external service, never auto-launched
+ * Port Architecture (user-facing: only 3000):
+ * - 3000: Next.js Frontend (sole entry point, Electron loads this)
+ *         Proxies /api/* to API backend via rewrites
+ * - 5055: FastAPI Backend (localhost-only, proxied by Next.js)
+ * - 8000: SurrealDB (database, required)
+ * - 1995: Memory Hub Gateway (optional, Docker)
+ *         Proxies /local-store/* /cc/* /chat/* /api/v1/* internally
+ *
+ * Memory Hub: OPTIONAL external service, never auto-launched.
  *   Users start it themselves via `docker compose -f docker-compose.memory-hub.yml up -d`
  *   The app detects it and enables memory features when available.
  */
@@ -115,10 +121,10 @@ export class ServiceManager {
 
     if (uvBin) {
       cmd = uvBin
-      args = ['run', 'uvicorn', 'api.main:app', '--host', '0.0.0.0', '--port', '5055']
+      args = ['run', 'uvicorn', 'api.main:app', '--host', '127.0.0.1', '--port', '5055']
     } else {
       cmd = this.findBinary('python3') || this.findBinary('python') || 'python'
-      args = ['-m', 'uvicorn', 'api.main:app', '--host', '0.0.0.0', '--port', '5055']
+      args = ['-m', 'uvicorn', 'api.main:app', '--host', '127.0.0.1', '--port', '5055']
     }
 
     const proc = spawn(cmd, args, {
