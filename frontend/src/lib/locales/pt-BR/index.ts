@@ -989,5 +989,7 @@ export const ptBR = {
     keyInsights: "Insights Chave",
     denseSummary: "Resumo Denso",
     simpleSummary: "Resumo Simples",
+    summary: "Resumo",
+    chooseSummaryType: "Escolha o tipo de resumo",
   },
 }

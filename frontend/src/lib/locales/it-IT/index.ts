@@ -989,5 +989,7 @@ export const itIT = {
     keyInsights: "Intuizioni chiave",
     denseSummary: "Riassunto denso",
     simpleSummary: "Riassunto semplice",
+    summary: "Riepilogo",
+    chooseSummaryType: "Scegli il tipo di riepilogo",
   },
 }

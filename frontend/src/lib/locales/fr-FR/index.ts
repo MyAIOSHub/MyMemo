@@ -989,5 +989,7 @@ export const frFR = {
     keyInsights: "Points clés",
     denseSummary: "Résumé dense",
     simpleSummary: "Résumé simple",
+    summary: "Résumé",
+    chooseSummaryType: "Choisir le type de résumé",
   },
 }

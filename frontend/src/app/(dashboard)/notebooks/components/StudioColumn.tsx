@@ -26,6 +26,7 @@ import {
   X,
   Lightbulb,
   BookOpen,
+  ClipboardList,
   LucideIcon,
 } from 'lucide-react'
 import { CollapsibleColumn, createCollapseButton } from '@/components/notebooks/CollapsibleColumn'
@@ -48,22 +49,33 @@ interface StudioItem {
   icon: LucideIcon
   labelKey: string
   transformationName?: string
-  action?: 'podcast'
+  action?: 'podcast' | 'summary'
 }
 
-const STUDIO_ITEMS: StudioItem[] = [
+// Sub-items inside the "Summary" card
+interface SummarySubItem {
+  icon: LucideIcon
+  labelKey: string
+  transformationName: string
+}
+
+const SUMMARY_SUB_ITEMS: SummarySubItem[] = [
+  { icon: FileText, labelKey: 'simpleSummary', transformationName: 'Simple Summary' },
+  { icon: BookOpen, labelKey: 'denseSummary', transformationName: 'Dense Summary' },
+  { icon: Lightbulb, labelKey: 'keyInsights', transformationName: 'Key Insights' },
   { icon: AudioLines, labelKey: 'audioOverview', transformationName: 'audio-overview' },
-  { icon: Monitor, labelKey: 'presentation', transformationName: 'presentation' },
   { icon: Video, labelKey: 'videoSummary', transformationName: 'video-summary' },
+]
+
+const STUDIO_ITEMS: StudioItem[] = [
+  { icon: ClipboardList, labelKey: 'summary', action: 'summary' },
+  { icon: Monitor, labelKey: 'presentation', transformationName: 'presentation' },
   { icon: GitBranch, labelKey: 'mindMap', transformationName: 'mind-map' },
   { icon: FileText, labelKey: 'report', transformationName: 'Analyze Paper' },
   { icon: Layers, labelKey: 'flashcards', transformationName: 'flashcards' },
   { icon: CircleHelp, labelKey: 'quiz', transformationName: 'Reflections' },
   { icon: BarChart3, labelKey: 'infographic', transformationName: 'infographic' },
   { icon: Table, labelKey: 'dataTable', transformationName: 'data-table' },
-  { icon: Lightbulb, labelKey: 'keyInsights', transformationName: 'Key Insights' },
-  { icon: BookOpen, labelKey: 'denseSummary', transformationName: 'Dense Summary' },
-  { icon: FileText, labelKey: 'simpleSummary', transformationName: 'Simple Summary' },
   { icon: Mic, labelKey: 'generatePodcast', action: 'podcast' },
 ]
 
@@ -79,9 +91,12 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
   const { studioCollapsed, toggleStudio } = useNotebookColumnsStore()
   const [podcastDialogOpen, setPodcastDialogOpen] = useState(false)
 
+  // Summary picker dialog
+  const [summaryPickerOpen, setSummaryPickerOpen] = useState(false)
+
   // Confirmation dialog state
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
-  const [pendingItem, setPendingItem] = useState<StudioItem | null>(null)
+  const [pendingItem, setPendingItem] = useState<{ labelKey: string; transformationName: string } | null>(null)
   const [selectedModel, setSelectedModel] = useState<string | undefined>(undefined)
 
   // Generation state
@@ -99,10 +114,15 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
 
   const studioTranslations: Record<string, string> = t.studio || {}
 
-  // Open confirmation dialog when clicking a non-podcast card
+  // Handle card click
   const handleItemClick = (item: StudioItem) => {
     if (item.action === 'podcast') {
       setPodcastDialogOpen(true)
+      return
+    }
+
+    if (item.action === 'summary') {
+      setSummaryPickerOpen(true)
       return
     }
 
@@ -112,8 +132,22 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
       return
     }
 
-    // Open confirm dialog (content check happens during generation)
-    setPendingItem(item)
+    // Open confirm dialog
+    setPendingItem({ labelKey: item.labelKey, transformationName: item.transformationName! })
+    setSelectedModel(modelDefaults?.default_chat_model || undefined)
+    setConfirmDialogOpen(true)
+  }
+
+  // Handle summary sub-item selection
+  const handleSummarySelect = (subItem: SummarySubItem) => {
+    const transformation = transformations?.find(tr => tr.name === subItem.transformationName)
+    if (!transformation) {
+      toast.error(t.studio?.transformationNotFound || 'Transformation not found')
+      return
+    }
+
+    setSummaryPickerOpen(false)
+    setPendingItem({ labelKey: subItem.labelKey, transformationName: subItem.transformationName })
     setSelectedModel(modelDefaults?.default_chat_model || undefined)
     setConfirmDialogOpen(true)
   }
@@ -155,7 +189,6 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
 
       const inputParts: string[] = []
       contextResult.context.sources?.forEach((s: Record<string, unknown>) => {
-        // Source.get_context returns 'full_text', Note.get_context returns 'content'
         const text = (s.full_text || s.content || '') as string
         if (text) inputParts.push(text)
       })
@@ -181,7 +214,7 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
         model_id: modelId,
       })
 
-      setActiveResult({ transformationName: pendingItem.transformationName!, output: result.output })
+      setActiveResult({ transformationName: pendingItem.transformationName, output: result.output })
       toast.success(t.studio?.generationComplete || 'Generation complete')
     } catch (err) {
       console.error('Studio generation failed:', err)
@@ -193,15 +226,25 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
     }
   }, [pendingItem, transformations, sources, notes, contextSelections, notebookId, selectedModel, modelDefaults, t])
 
+  // Find label for active result (check both STUDIO_ITEMS and SUMMARY_SUB_ITEMS)
   const activeResultLabel = activeResult
-    ? studioTranslations[
-        STUDIO_ITEMS.find(item => item.transformationName === activeResult.transformationName)?.labelKey || ''
-      ] || activeResult.transformationName
+    ? (() => {
+        const mainItem = STUDIO_ITEMS.find(item => item.transformationName === activeResult.transformationName)
+        if (mainItem) return studioTranslations[mainItem.labelKey] || activeResult.transformationName
+        const subItem = SUMMARY_SUB_ITEMS.find(item => item.transformationName === activeResult.transformationName)
+        if (subItem) return studioTranslations[subItem.labelKey] || activeResult.transformationName
+        return activeResult.transformationName
+      })()
     : ''
 
   const pendingItemLabel = pendingItem
     ? studioTranslations[pendingItem.labelKey] || pendingItem.labelKey
     : ''
+
+  // Check if summary card should be available (at least one sub-item has a transformation)
+  const isSummaryAvailable = SUMMARY_SUB_ITEMS.some(
+    sub => transformations?.some(tr => tr.name === sub.transformationName)
+  )
 
   return (
     <>
@@ -221,24 +264,24 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
           </CardHeader>
 
           <CardContent className="flex-1 overflow-y-auto min-h-0">
-            {/* Studio output grid */}
+            {/* Studio card grid */}
             <div className="grid grid-cols-2 gap-2 mb-6">
               {STUDIO_ITEMS.map((item) => {
                 const Icon = item.icon
                 const label = studioTranslations[item.labelKey] || item.labelKey
                 const isPodcast = item.action === 'podcast'
+                const isSummary = item.action === 'summary'
                 const isItemGenerating = isGenerating && generatingItem === item.labelKey
-                const hasTransformation = isPodcast || (item.transformationName && transformations?.some(tr => tr.name === item.transformationName))
-                const isAvailable = hasTransformation === true
+                const isAvailable = isPodcast
+                  || isSummary ? isSummaryAvailable
+                  : !!(item.transformationName && transformations?.some(tr => tr.name === item.transformationName))
                 return (
                   <button
                     key={item.labelKey}
                     className={`flex flex-col items-start gap-1.5 p-2 rounded-lg border transition-colors group text-left overflow-hidden ${
                       !isAvailable
                         ? 'opacity-40 cursor-not-allowed bg-muted/50 border-border'
-                        : isItemGenerating
-                          ? 'bg-primary/5 border-primary/20 hover:bg-primary/10 cursor-pointer'
-                          : 'bg-primary/5 border-primary/20 hover:bg-primary/10 cursor-pointer'
+                        : 'bg-primary/5 border-primary/20 hover:bg-primary/10 cursor-pointer'
                     }`}
                     onClick={() => isAvailable && handleItemClick(item)}
                     disabled={isGenerating || !isAvailable}
@@ -311,7 +354,46 @@ export function StudioColumn({ notebookId, sources, notes, contextSelections }: 
         </Card>
       </CollapsibleColumn>
 
-      {/* Confirmation dialog for non-podcast studio items */}
+      {/* Summary type picker dialog */}
+      <Dialog open={summaryPickerOpen} onOpenChange={setSummaryPickerOpen}>
+        <DialogContent className="sm:max-w-[360px]">
+          <DialogTitle>{studioTranslations.summary || 'Summary'}</DialogTitle>
+          <DialogDescription>
+            {studioTranslations.chooseSummaryType || 'Choose summary type'}
+          </DialogDescription>
+
+          <div className="grid grid-cols-1 gap-2 py-2">
+            {SUMMARY_SUB_ITEMS.map((subItem) => {
+              const SubIcon = subItem.icon
+              const subLabel = studioTranslations[subItem.labelKey] || subItem.labelKey
+              const hasTransformation = transformations?.some(tr => tr.name === subItem.transformationName)
+              return (
+                <button
+                  key={subItem.labelKey}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors text-left ${
+                    hasTransformation
+                      ? 'bg-primary/5 border-primary/20 hover:bg-primary/10 cursor-pointer'
+                      : 'opacity-40 cursor-not-allowed bg-muted/50 border-border'
+                  }`}
+                  onClick={() => hasTransformation && handleSummarySelect(subItem)}
+                  disabled={!hasTransformation}
+                >
+                  <SubIcon className={`h-4 w-4 flex-shrink-0 ${
+                    hasTransformation ? 'text-primary' : 'text-muted-foreground/50'
+                  }`} />
+                  <span className={`text-sm font-medium ${
+                    hasTransformation ? 'text-foreground' : 'text-muted-foreground/50'
+                  }`}>
+                    {subLabel}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation dialog for generation */}
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogTitle>{pendingItemLabel}</DialogTitle>

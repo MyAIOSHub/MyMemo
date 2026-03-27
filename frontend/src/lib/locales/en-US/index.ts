@@ -990,5 +990,7 @@ export const enUS = {
     keyInsights: "Key Insights",
     denseSummary: "Dense Summary",
     simpleSummary: "Simple Summary",
+    summary: "Summary",
+    chooseSummaryType: "Choose summary type",
   },
 }

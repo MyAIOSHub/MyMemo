@@ -990,5 +990,7 @@ export const bnIN = {
     keyInsights: "মূল অন্তর্দৃষ্টি",
     denseSummary: "ঘন সারাংশ",
     simpleSummary: "সরল সারাংশ",
+    summary: "সারাংশ",
+    chooseSummaryType: "সারাংশের ধরন নির্বাচন করুন",
   },
 }

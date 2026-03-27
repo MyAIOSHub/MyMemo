@@ -989,5 +989,7 @@ export const zhCN = {
     keyInsights: "关键洞察",
     denseSummary: "密集摘要",
     simpleSummary: "简单摘要",
+    summary: "摘要",
+    chooseSummaryType: "选择摘要类型",
   },
 }

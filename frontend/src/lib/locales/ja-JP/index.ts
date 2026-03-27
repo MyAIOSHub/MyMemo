@@ -989,5 +989,7 @@ export const jaJP = {
     keyInsights: "重要な洞察",
     denseSummary: "高密度要約",
     simpleSummary: "簡潔な要約",
+    summary: "要約",
+    chooseSummaryType: "要約タイプを選択",
   },
 }

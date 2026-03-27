@@ -989,5 +989,7 @@ export const zhTW = {
     keyInsights: "關鍵洞察",
     denseSummary: "密集摘要",
     simpleSummary: "簡單摘要",
+    summary: "摘要",
+    chooseSummaryType: "選擇摘要類型",
   },
 }

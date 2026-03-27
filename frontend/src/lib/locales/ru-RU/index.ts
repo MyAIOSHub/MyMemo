@@ -989,5 +989,7 @@ export const ruRU = {
     keyInsights: "Ключевые выводы",
     denseSummary: "Плотное резюме",
     simpleSummary: "Простое резюме",
+    summary: "Резюме",
+    chooseSummaryType: "Выберите тип резюме",
   },
 }
