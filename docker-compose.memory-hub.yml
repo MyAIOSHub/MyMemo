@@ -83,6 +83,13 @@ services:
       RERANK_MAX_RETRIES: ${RERANK_MAX_RETRIES:-3}
       RERANK_BATCH_SIZE: ${RERANK_BATCH_SIZE:-10}
       RERANK_MAX_CONCURRENT: ${RERANK_MAX_CONCURRENT:-5}
+      # v1 multi-tenant: single-tenant mode. Keeps the project running under one tenant id.
+      TENANT_SINGLE_TENANT_ID: ${TENANT_SINGLE_TENANT_ID:-t_mymemo}
+      AGENT_MEMORIZE_MODE: ${AGENT_MEMORIZE_MODE:-online}
+      MILVUS_SIMILARITY_THRESHOLD: ${MILVUS_SIMILARITY_THRESHOLD:-0.6}
+      RECALL_MULTIPLIER: ${RECALL_MULTIPLIER:-2}
+      RERANK_SCORE_THRESHOLD: ${RERANK_SCORE_THRESHOLD:-0.6}
+      TOPK_LIMIT: ${TOPK_LIMIT:-100}
     depends_on:
       mongodb:
         condition: service_healthy
