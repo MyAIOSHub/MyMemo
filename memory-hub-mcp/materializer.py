@@ -171,6 +171,26 @@ def classify_episodes(episodes: list[dict]) -> dict[str, list[dict]]:
     return dict(buckets)
 
 
+def _build_source_index(episodes: list[dict]) -> str:
+    """Build a source index section linking back to EverCore episodes."""
+    if not episodes:
+        return ""
+    lines = ["\n---\n", "## Source Index\n",
+             "| # | Episode ID | Session | Timestamp | Subject |",
+             "|---|-----------|---------|-----------|---------|"]
+    seen_ids: set[str] = set()
+    for i, ep in enumerate(episodes):
+        ep_id = ep.get("id", "")
+        if not ep_id or ep_id in seen_ids:
+            continue
+        seen_ids.add(ep_id)
+        session = ep.get("session_id", "")[:12]
+        ts = (ep.get("timestamp") or "")[:19]
+        subject = (ep.get("subject") or "")[:50].replace("|", "/")
+        lines.append(f"| {i+1} | `{ep_id[:16]}` | `{session}` | {ts} | {subject} |")
+    return "\n".join(lines) + "\n"
+
+
 def summarize_for_md(project: str, episodes: list[dict]) -> str:
     """Use LLM to generate a coherent .md summary for a project's episodes."""
     # Build episode content
@@ -179,7 +199,8 @@ def summarize_for_md(project: str, episodes: list[dict]) -> str:
         subject = ep.get("subject", "")
         summary = ep.get("summary", "")
         ts = ep.get("timestamp", "")
-        ep_texts.append(f"[{ts}] {subject}\n{summary[:300]}")
+        ep_id = ep.get("id", "")[:16]
+        ep_texts.append(f"[{ts}] (ep:{ep_id}) {subject}\n{summary[:300]}")
 
     content = "\n---\n".join(ep_texts)
 
@@ -188,19 +209,27 @@ def summarize_for_md(project: str, episodes: list[dict]) -> str:
         "write a concise .md document summarizing the key knowledge. "
         "Include: project overview, recent decisions, technical details, "
         "current status. Use markdown headers. Keep under 3000 characters. "
-        "Write in the same language as the input."
+        "Write in the same language as the input. "
+        "IMPORTANT: When referencing specific information from an episode, "
+        "include the episode reference tag (ep:xxxx) inline so readers can "
+        "trace back to the source."
     )
 
     try:
-        return _llm_call(system, f"Project: {project}\n\nMemories:\n{content}", max_tokens=4000)
+        summary = _llm_call(system, f"Project: {project}\n\nMemories:\n{content}", max_tokens=4000)
     except Exception as e:
         # Fallback: raw concatenation
         lines = [f"# {project}\n"]
         for ep in episodes[:15]:
-            lines.append(f"- **{ep.get('subject', 'Untitled')}** ({ep.get('timestamp', '')})")
+            ep_id = ep.get("id", "")[:16]
+            lines.append(f"- **{ep.get('subject', 'Untitled')}** ({ep.get('timestamp', '')}) `ep:{ep_id}`")
             if ep.get("summary"):
                 lines.append(f"  {ep['summary'][:200]}")
-        return "\n".join(lines)
+        summary = "\n".join(lines)
+
+    # Append source index table
+    summary += _build_source_index(episodes)
+    return summary
 
 
 # ---------------------------------------------------------------------------
@@ -214,10 +243,13 @@ def generate_user_preferences(profiles: list[dict]) -> str:
 
     lines = ["# User Preferences\n"]
     for p in profiles:
+        p_id = p.get("id", "")[:16]
         summary = p.get("summary") or ""
         subject = p.get("subject") or ""
         if subject:
-            lines.append(f"## {subject}\n")
+            lines.append(f"## {subject}")
+        if p_id:
+            lines.append(f"> Source: `profile:{p_id}`\n")
         if summary:
             lines.append(f"{summary}\n")
     return "\n".join(lines) if len(lines) > 1 else "# User Preferences\n\nProfile data is still being built.\n"
@@ -241,14 +273,28 @@ def generate_recent_focus(episodes: list[dict]) -> str:
     if not recent:
         return f"# Recent Focus (last {RECENT_DAYS} days)\n\nNo recent activity.\n"
 
+    # Dedup by episode ID
+    seen: set[str] = set()
+    deduped: list[dict] = []
+    for ep in recent:
+        ep_id = ep.get("id", "")
+        if ep_id and ep_id not in seen:
+            seen.add(ep_id)
+            deduped.append(ep)
+
     lines = [f"# Recent Focus (last {RECENT_DAYS} days)\n"]
-    for ep in recent[:20]:
+    for ep in deduped[:20]:
+        ep_id = ep.get("id", "")[:16]
+        session_id = ep.get("session_id", "")[:12]
         subject = ep.get("subject", "Untitled")
         summary = (ep.get("summary") or "")[:200]
         ts = ep.get("timestamp", "")
-        lines.append(f"## [{ts[:10]}] {subject}\n")
+        lines.append(f"## [{ts[:10]}] {subject}")
+        lines.append(f"> Source: `ep:{ep_id}` | session:`{session_id}` | {ts}\n")
         if summary:
             lines.append(f"{summary}\n")
+
+    lines.append(_build_source_index(deduped))
     return "\n".join(lines)
 
 
