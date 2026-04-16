@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Query
 from loguru import logger
 from pydantic import BaseModel, Field
 
-VALID_MEMORY_TYPES = Literal["episodic_memory", "event_log", "foresight"]
+VALID_MEMORY_TYPES = Literal["episodic_memory", "profile", "raw_message"]
 
 from api.memory_service import memory_service
 from api.memory_import_service import import_memories_as_sources
@@ -25,7 +25,7 @@ class MemoryImportRequest(BaseModel):
     memory_ids: List[str] = Field(..., description="EverMemOS memory IDs to import")
     memory_type: VALID_MEMORY_TYPES = Field(
         default="episodic_memory",
-        description="Memory type: episodic_memory, event_log, foresight",
+        description="Memory type: episodic_memory, profile, raw_message",
     )
     notebook_id: str = Field(..., description="Target notebook ID")
     user_id: Optional[str] = Field(

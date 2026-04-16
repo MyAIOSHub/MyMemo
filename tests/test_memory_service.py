@@ -1,11 +1,11 @@
 """
-Unit tests for api.memory_service.MemoryService.
+Unit tests for api.memory_service.MemoryService (EverCore v1 API).
 
 All external HTTP calls are mocked via httpx.AsyncClient patches.
 No real Memory Hub or network access is required.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -20,12 +20,21 @@ from api.memory_service import MemoryService
 
 def _make_response(status_code: int = 200, json_data: dict | None = None) -> httpx.Response:
     """Build a fake httpx.Response."""
-    resp = httpx.Response(
+    return httpx.Response(
         status_code=status_code,
         json=json_data or {},
-        request=httpx.Request("GET", "http://test"),
+        request=httpx.Request("POST", "http://test"),
     )
-    return resp
+
+
+def _attach_mock_client(svc: MemoryService, *, get=None, post=None) -> None:
+    mock = AsyncMock(spec=httpx.AsyncClient)
+    mock.is_closed = False
+    if get is not None:
+        mock.get = AsyncMock(return_value=get) if not isinstance(get, AsyncMock) else get
+    if post is not None:
+        mock.post = AsyncMock(return_value=post) if not isinstance(post, AsyncMock) else post
+    svc._client = mock
 
 
 # ============================================================================
@@ -34,77 +43,60 @@ def _make_response(status_code: int = 200, json_data: dict | None = None) -> htt
 
 
 class TestCheckStatus:
-    """Tests for MemoryService.check_status."""
-
     @pytest.mark.asyncio
     async def test_connected_when_health_ok(self):
-        """Health endpoint returns 200 -> connected=True."""
         svc = MemoryService()
-        mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.is_closed = False
-        mock_client.get = AsyncMock(return_value=_make_response(200, {}))
-        svc._client = mock_client
-
+        _attach_mock_client(svc, get=_make_response(200, {}))
         result = await svc.check_status()
         assert result["connected"] is True
         assert result["status_code"] == 200
 
     @pytest.mark.asyncio
     async def test_connected_false_on_500(self):
-        """Health endpoint returns 500 -> connected=False."""
         svc = MemoryService()
-        mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.is_closed = False
-        mock_client.get = AsyncMock(return_value=_make_response(500, {}))
-        svc._client = mock_client
-
+        _attach_mock_client(svc, get=_make_response(500, {}))
         result = await svc.check_status()
         assert result["connected"] is False
 
     @pytest.mark.asyncio
     async def test_connected_false_on_exception(self):
-        """Network error -> connected=False with error message."""
         svc = MemoryService()
-        mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.is_closed = False
-        mock_client.get = AsyncMock(side_effect=ConnectionError("refused"))
-        svc._client = mock_client
-
+        mock = AsyncMock(spec=httpx.AsyncClient)
+        mock.is_closed = False
+        mock.get = AsyncMock(side_effect=ConnectionError("refused"))
+        svc._client = mock
         result = await svc.check_status()
         assert result["connected"] is False
         assert "error" in result
 
 
 # ============================================================================
-# TEST SUITE 2: browse_memories
+# TEST SUITE 2: browse_memories  (POST /api/v1/memories/get)
 # ============================================================================
 
 
 class TestBrowseMemories:
-    """Tests for MemoryService.browse_memories."""
-
     @pytest.mark.asyncio
     async def test_normal_return(self):
-        """Successful browse returns normalized memories."""
         svc = MemoryService()
-        mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.is_closed = False
-        mock_client.get = AsyncMock(
-            return_value=_make_response(
+        _attach_mock_client(
+            svc,
+            post=_make_response(
                 200,
                 {
-                    "result": {
-                        "memories": [
-                            {"id": "mem1", "summary": "Test summary", "title": "Title1"},
+                    "data": {
+                        "episodes": [
+                            {"id": "mem1", "subject": "Subj", "summary": "Sum"},
                         ],
+                        "profiles": [],
+                        "agent_cases": [],
+                        "agent_skills": [],
                         "total_count": 1,
-                        "has_more": False,
+                        "count": 1,
                     }
                 },
-            )
+            ),
         )
-        svc._client = mock_client
-
         result = await svc.browse_memories(memory_type="episodic_memory")
         assert len(result["memories"]) == 1
         assert result["memories"][0]["id"] == "mem1"
@@ -113,185 +105,232 @@ class TestBrowseMemories:
 
     @pytest.mark.asyncio
     async def test_empty_result(self):
-        """Browse with no memories returns empty list."""
         svc = MemoryService()
-        mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.is_closed = False
-        mock_client.get = AsyncMock(
-            return_value=_make_response(
+        _attach_mock_client(
+            svc,
+            post=_make_response(
                 200,
-                {"result": {"memories": [], "total_count": 0, "has_more": False}},
-            )
+                {
+                    "data": {
+                        "episodes": [],
+                        "profiles": [],
+                        "agent_cases": [],
+                        "agent_skills": [],
+                        "total_count": 0,
+                        "count": 0,
+                    }
+                },
+            ),
         )
-        svc._client = mock_client
-
         result = await svc.browse_memories()
         assert result["memories"] == []
         assert result["total_count"] == 0
 
     @pytest.mark.asyncio
-    async def test_http_error_raises(self):
-        """HTTP 502 from upstream -> raises HTTPError."""
+    async def test_pagination_has_more(self):
         svc = MemoryService()
-        mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.is_closed = False
-        resp = _make_response(502, {"error": "bad gateway"})
-        mock_client.get = AsyncMock(return_value=resp)
-        svc._client = mock_client
+        _attach_mock_client(
+            svc,
+            post=_make_response(
+                200,
+                {
+                    "data": {
+                        "episodes": [{"id": f"e{i}", "summary": "x"} for i in range(5)],
+                        "profiles": [],
+                        "agent_cases": [],
+                        "agent_skills": [],
+                        "total_count": 50,
+                        "count": 5,
+                    }
+                },
+            ),
+        )
+        result = await svc.browse_memories(limit=5, offset=0)
+        assert result["total_count"] == 50
+        assert result["has_more"] is True
 
+    @pytest.mark.asyncio
+    async def test_has_more_uses_raw_count_not_filtered(self):
+        """Items dropped by `_memory_to_item` (no id) must not skew has_more."""
+        svc = MemoryService()
+        _attach_mock_client(
+            svc,
+            post=_make_response(
+                200,
+                {
+                    "data": {
+                        # 5 raw items but 2 have no id → filtered out by normalization
+                        "episodes": [
+                            {"id": "e1", "summary": "a"},
+                            {"summary": "no-id"},
+                            {"id": "e2", "summary": "b"},
+                            {"summary": "no-id-2"},
+                            {"id": "e3", "summary": "c"},
+                        ],
+                        "profiles": [],
+                        "agent_cases": [],
+                        "agent_skills": [],
+                        "total_count": 5,
+                        # server returned all 5 raw items in this single page
+                        "count": 5,
+                    }
+                },
+            ),
+        )
+        result = await svc.browse_memories(limit=10, offset=0)
+        # 3 normalized items, but has_more must still reflect raw page coverage
+        assert len(result["memories"]) == 3
+        assert result["has_more"] is False, "raw count of 5 covers total of 5"
+
+    @pytest.mark.asyncio
+    async def test_http_error_raises(self):
+        svc = MemoryService()
+        _attach_mock_client(svc, post=_make_response(502, {"error": "bad gateway"}))
         with pytest.raises(httpx.HTTPStatusError):
             await svc.browse_memories()
 
+    @pytest.mark.asyncio
+    async def test_profile_bucket(self):
+        svc = MemoryService()
+        _attach_mock_client(
+            svc,
+            post=_make_response(
+                200,
+                {
+                    "data": {
+                        "episodes": [],
+                        "profiles": [{"id": "p1", "subject": "User profile"}],
+                        "agent_cases": [],
+                        "agent_skills": [],
+                        "total_count": 1,
+                        "count": 1,
+                    }
+                },
+            ),
+        )
+        result = await svc.browse_memories(memory_type="profile")
+        assert len(result["memories"]) == 1
+        assert result["memories"][0]["id"] == "p1"
+        assert result["memories"][0]["memory_type"] == "profile"
+
 
 # ============================================================================
-# TEST SUITE 3: search_memories
+# TEST SUITE 3: search_memories  (POST /api/v1/memories/search)
 # ============================================================================
 
 
 class TestSearchMemories:
-    """Tests for MemoryService.search_memories."""
-
     @pytest.mark.asyncio
-    async def test_hybrid_search_with_scores(self):
-        """Search returns memories with scores correctly attached."""
+    async def test_search_returns_inline_score(self):
         svc = MemoryService()
-        mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.is_closed = False
-        mock_client.get = AsyncMock(
-            return_value=_make_response(
+        _attach_mock_client(
+            svc,
+            post=_make_response(
                 200,
                 {
-                    "result": {
-                        "memories": [
-                            {
-                                "episodic_memory": [
-                                    {"id": "e1", "summary": "Episode one"},
-                                ]
-                            }
+                    "data": {
+                        "episodes": [
+                            {"id": "e1", "summary": "Episode one", "score": 0.95},
                         ],
-                        "scores": [
-                            {"episodic_memory": [0.95]},
-                        ],
-                        "total_count": 1,
-                        "has_more": False,
+                        "profiles": [],
+                        "raw_messages": [],
+                        "agent_memory": None,
                     }
                 },
-            )
+            ),
         )
-        svc._client = mock_client
-
         result = await svc.search_memories(query="test", retrieve_method="hybrid")
         assert len(result["memories"]) == 1
+        assert result["memories"][0]["id"] == "e1"
         assert result["memories"][0]["score"] == 0.95
 
     @pytest.mark.asyncio
-    async def test_search_http_error_raises(self):
-        """HTTP error in search -> raises."""
+    async def test_search_aggregates_buckets(self):
         svc = MemoryService()
-        mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.is_closed = False
-        resp = _make_response(500, {"error": "server error"})
-        mock_client.get = AsyncMock(return_value=resp)
-        svc._client = mock_client
+        _attach_mock_client(
+            svc,
+            post=_make_response(
+                200,
+                {
+                    "data": {
+                        "episodes": [{"id": "e1", "summary": "ep"}],
+                        "profiles": [{"id": "p1", "subject": "prof"}],
+                        "raw_messages": [{"id": "r1", "content": "raw"}],
+                        "agent_memory": None,
+                    }
+                },
+            ),
+        )
+        result = await svc.search_memories(query="x")
+        types = {m["memory_type"] for m in result["memories"]}
+        assert types == {"episodic_memory", "profile", "raw_message"}
 
+    @pytest.mark.asyncio
+    async def test_search_http_error_raises(self):
+        svc = MemoryService()
+        _attach_mock_client(svc, post=_make_response(500, {"error": "server error"}))
         with pytest.raises(httpx.HTTPStatusError):
             await svc.search_memories(query="test")
 
 
 # ============================================================================
-# TEST SUITE 4: _normalize_fetch_memories
-# ============================================================================
-
-
-class TestNormalizeFetchMemories:
-    """Tests for MemoryService._normalize_fetch_memories."""
-
-    def test_empty_list(self):
-        svc = MemoryService()
-        assert svc._normalize_fetch_memories([], "episodic_memory") == []
-
-    def test_non_dict_elements_skipped(self):
-        svc = MemoryService()
-        result = svc._normalize_fetch_memories(
-            ["not_a_dict", 42, None], "episodic_memory"
-        )
-        assert result == []
-
-    def test_missing_id_skipped(self):
-        svc = MemoryService()
-        result = svc._normalize_fetch_memories(
-            [{"summary": "no id here"}], "episodic_memory"
-        )
-        assert result == []
-
-    def test_valid_memory_normalized(self):
-        svc = MemoryService()
-        result = svc._normalize_fetch_memories(
-            [{"id": "m1", "summary": "Hello"}], "episodic_memory"
-        )
-        assert len(result) == 1
-        assert result[0]["id"] == "m1"
-        assert result[0]["content"] == "Hello"
-
-
-# ============================================================================
-# TEST SUITE 5: _memory_to_item per memory_type
+# TEST SUITE 4: _memory_to_item per memory_type (v1 fields)
 # ============================================================================
 
 
 class TestMemoryToItem:
-    """Tests for MemoryService._memory_to_item across memory types."""
-
-    def test_episodic_memory(self):
+    def test_episodic_memory_prefers_subject_for_title(self):
         svc = MemoryService()
         item = svc._memory_to_item(
-            {"id": "e1", "summary": "Sum", "title": "Ep Title"},
+            {"id": "e1", "subject": "Subj", "summary": "Sum"},
             "episodic_memory",
         )
         assert item is not None
+        assert item["title"] == "Subj"
         assert item["content"] == "Sum"
-        assert item["title"] == "Ep Title"
 
-    def test_episodic_memory_falls_back_to_subject(self):
+    def test_episodic_memory_falls_back_to_summary_then_episode(self):
         svc = MemoryService()
         item = svc._memory_to_item(
-            {"id": "e2", "summary": "Sum", "subject": "Subject line"},
+            {"id": "e2", "summary": "Sum line", "episode": "Ep details"},
             "episodic_memory",
         )
-        assert item["title"] == "Subject line"
+        assert item["title"].startswith("Sum line")
+        assert item["content"] == "Sum line"
 
-    def test_event_log(self):
+    def test_profile_type(self):
         svc = MemoryService()
         item = svc._memory_to_item(
-            {"id": "ev1", "atomic_fact": "User clicked button"},
-            "event_log",
+            {"id": "p1", "subject": "Profile subj", "summary": "About user"},
+            "profile",
         )
         assert item is not None
-        assert item["content"] == "User clicked button"
-        assert item["title"] == "User clicked button"
+        assert item["memory_type"] == "profile"
+        assert item["title"] == "Profile subj"
+        assert item["content"] == "About user"
 
-    def test_foresight(self):
+    def test_raw_message_type(self):
         svc = MemoryService()
         item = svc._memory_to_item(
-            {"id": "f1", "content": "Predicted outcome"},
-            "foresight",
+            {"id": "r1", "content": "User said hi"},
+            "raw_message",
         )
         assert item is not None
-        assert item["content"] == "Predicted outcome"
+        assert item["content"] == "User said hi"
+        assert item["title"] == "User said hi"
 
     def test_unknown_type_fallback(self):
         svc = MemoryService()
         item = svc._memory_to_item(
-            {"id": "u1", "content": "Generic content"},
+            {"id": "u1", "summary": "Generic"},
             "some_unknown_type",
         )
         assert item is not None
-        assert item["content"] == "Generic content"
+        assert item["content"] == "Generic"
 
     def test_no_id_returns_none(self):
         svc = MemoryService()
-        item = svc._memory_to_item({"summary": "no id"}, "episodic_memory")
-        assert item is None
+        assert svc._memory_to_item({"summary": "no id"}, "episodic_memory") is None
 
     def test_episode_id_used_as_fallback(self):
         svc = MemoryService()
@@ -304,68 +343,30 @@ class TestMemoryToItem:
 
 
 # ============================================================================
-# TEST SUITE 6: source_origin inference
+# TEST SUITE 5: source_origin inference (unchanged from v0)
 # ============================================================================
 
 
 class TestSourceOriginInference:
-    """Tests for source_origin field based on group_name."""
-
-    def test_browser_origin(self):
+    @pytest.mark.parametrize(
+        "group_name,expected",
+        [
+            ("MyBrowserTab", "browser"),
+            ("MyMemo Session", "browser"),
+            ("attention_capture", "browser"),
+            ("Claude Session", "claude_code"),
+            ("CC-session-1", "claude_code"),
+            ("daily_review", "evermemo"),
+            ("", "evermemo"),
+        ],
+    )
+    def test_origin(self, group_name, expected):
         svc = MemoryService()
         item = svc._memory_to_item(
-            {"id": "b1", "summary": "S", "group_name": "MyBrowserTab"},
+            {"id": "x", "summary": "S", "group_name": group_name},
             "episodic_memory",
         )
-        assert item["source_origin"] == "browser"
-
-    def test_mymemo_origin(self):
-        svc = MemoryService()
-        item = svc._memory_to_item(
-            {"id": "b2", "summary": "S", "group_name": "MyMemo Session"},
-            "episodic_memory",
-        )
-        assert item["source_origin"] == "browser"
-
-    def test_attention_origin(self):
-        svc = MemoryService()
-        item = svc._memory_to_item(
-            {"id": "b3", "summary": "S", "group_name": "attention_capture"},
-            "episodic_memory",
-        )
-        assert item["source_origin"] == "browser"
-
-    def test_claude_origin(self):
-        svc = MemoryService()
-        item = svc._memory_to_item(
-            {"id": "c1", "summary": "S", "group_name": "Claude Session"},
-            "episodic_memory",
-        )
-        assert item["source_origin"] == "claude_code"
-
-    def test_cc_origin(self):
-        svc = MemoryService()
-        item = svc._memory_to_item(
-            {"id": "c2", "summary": "S", "group_name": "CC-session-1"},
-            "episodic_memory",
-        )
-        assert item["source_origin"] == "claude_code"
-
-    def test_default_evermemo_origin(self):
-        svc = MemoryService()
-        item = svc._memory_to_item(
-            {"id": "d1", "summary": "S", "group_name": "daily_review"},
-            "episodic_memory",
-        )
-        assert item["source_origin"] == "evermemo"
-
-    def test_empty_group_name_defaults_evermemo(self):
-        svc = MemoryService()
-        item = svc._memory_to_item(
-            {"id": "d2", "summary": "S"},
-            "episodic_memory",
-        )
-        assert item["source_origin"] == "evermemo"
+        assert item["source_origin"] == expected
 
 
 if __name__ == "__main__":

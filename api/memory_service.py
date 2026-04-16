@@ -1,4 +1,4 @@
-"""Service for communicating with EverMemOS Memory Hub."""
+"""Service for communicating with EverOS / EverCore Memory Hub (v1 API)."""
 
 import asyncio
 from typing import Any, Dict, List, Optional
@@ -10,7 +10,7 @@ from open_notebook.config import MEMORY_HUB_URL, MEMORY_HUB_USER_ID
 
 
 class MemoryService:
-    """HTTP client for EverMemOS Memory Hub API.
+    """HTTP client for EverOS / EverCore (v1) Memory Hub API.
 
     Uses a shared httpx.AsyncClient for connection pooling.
     Thread-safe via asyncio.Lock.
@@ -23,10 +23,7 @@ class MemoryService:
         self._lock = asyncio.Lock()
 
     async def _get_client(self) -> httpx.AsyncClient:
-        """Get or create shared HTTP client with connection pooling.
-
-        Uses asyncio.Lock to prevent race conditions under concurrent requests.
-        """
+        """Get or create shared HTTP client with connection pooling."""
         async with self._lock:
             if self._client is None or self._client.is_closed:
                 self._client = httpx.AsyncClient(
@@ -44,12 +41,17 @@ class MemoryService:
                 self._client = None
 
     async def check_status(self) -> Dict[str, Any]:
-        """Check Memory Hub connectivity."""
+        """Check Memory Hub connectivity.
+
+        Treats only 2xx/3xx as connected. A 4xx (e.g. 404 from a wrong URL,
+        401 from misconfigured auth) means the hub is reachable but the
+        endpoint is unusable, which the UI should surface as disconnected.
+        """
         try:
             client = await self._get_client()
             resp = await client.get("/health", timeout=5.0)
             return {
-                "connected": resp.status_code < 500,
+                "connected": resp.status_code < 400,
                 "status_code": resp.status_code,
                 "url": self.base_url,
             }
@@ -70,35 +72,61 @@ class MemoryService:
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Browse memories from EverMemOS with pagination.
+        """Browse memories from EverOS with pagination.
 
-        Proxies to GET /api/v1/memories (FetchMemRequest).
+        Proxies to POST /api/v1/memories/get (GetMemRequest).
+
+        v1 uses page/page_size instead of limit/offset; we map by clamping
+        offset down to the nearest page boundary. Callers should keep offset
+        as an exact multiple of `limit` to avoid lossy rounding.
         """
-        params: Dict[str, Any] = {
-            "user_id": user_id or self.default_user_id,
+        page_size = max(1, min(limit, 100))
+        if offset and offset % page_size != 0:
+            logger.warning(
+                "browse_memories: offset=%s is not a multiple of limit=%s; "
+                "rounding down to the nearest page boundary",
+                offset,
+                page_size,
+            )
+        page = (offset // page_size) + 1
+
+        filters: Dict[str, Any] = {"user_id": user_id or self.default_user_id}
+        if start_time or end_time:
+            ts_filter: Dict[str, Any] = {}
+            if start_time:
+                ts_filter["gte"] = start_time
+            if end_time:
+                ts_filter["lte"] = end_time
+            filters["timestamp"] = ts_filter
+
+        payload: Dict[str, Any] = {
             "memory_type": memory_type,
-            "limit": limit,
-            "offset": offset,
+            "page": page,
+            "page_size": page_size,
+            "rank_by": "timestamp",
+            "rank_order": "desc",
+            "filters": filters,
         }
-        if start_time:
-            params["start_time"] = start_time
-        if end_time:
-            params["end_time"] = end_time
 
         try:
             client = await self._get_client()
-            resp = await client.get("/api/v1/memories", params=params)
+            resp = await client.post("/api/v1/memories/get", json=payload)
             resp.raise_for_status()
-            data = resp.json()
+            body = resp.json()
+            data = body.get("data") or {}
 
-            result = data.get("result", {})
-            raw_memories = result.get("memories", [])
-            memories = self._normalize_fetch_memories(raw_memories, memory_type)
+            raw = self._extract_items(data, memory_type)
+            memories = [m for m in (self._memory_to_item(r, memory_type) for r in raw) if m]
 
+            # has_more must be derived from the RAW page count returned by the
+            # server, not the post-normalization count, otherwise items dropped
+            # by `_memory_to_item` (missing id, etc.) would skew pagination.
+            raw_count = data.get("count", len(raw))
+            total = data.get("total_count", raw_count)
             return {
                 "memories": memories,
-                "total_count": result.get("total_count", len(memories)),
-                "has_more": result.get("has_more", False),
+                "total_count": total,
+                "has_more": (offset + raw_count) < total,
             }
         except httpx.HTTPError as e:
             logger.error(f"Failed to browse memories: {e}")
@@ -112,131 +140,122 @@ class MemoryService:
         retrieve_method: str = "hybrid",
         top_k: int = 20,
     ) -> Dict[str, Any]:
-        """Search memories from EverMemOS.
+        """Search memories from EverOS.
 
-        Proxies to GET /api/v1/memories/search (RetrieveMemRequest).
+        Proxies to POST /api/v1/memories/search (SearchMemoriesRequest).
         """
         if memory_types is None:
-            memory_types = ["episodic_memory", "event_log"]
+            memory_types = ["episodic_memory"]
 
-        params: Dict[str, Any] = {
-            "user_id": user_id or self.default_user_id,
+        payload: Dict[str, Any] = {
             "query": query,
-            "retrieve_method": retrieve_method,
-            "top_k": top_k,
+            "method": retrieve_method,
             "memory_types": memory_types,
+            "top_k": top_k,
+            "filters": {"user_id": user_id or self.default_user_id},
         }
 
         try:
             client = await self._get_client()
-            resp = await client.get("/api/v1/memories/search", params=params)
+            resp = await client.post("/api/v1/memories/search", json=payload)
             resp.raise_for_status()
-            data = resp.json()
+            body = resp.json()
+            data = body.get("data") or {}
 
-            result = data.get("result", {})
-            raw_memories = result.get("memories", [])
-            scores = result.get("scores", [])
-            memories = self._normalize_search_memories(raw_memories, scores)
+            memories: List[Dict[str, Any]] = []
+            # Search response buckets each memory type in its own key.
+            for bucket, mem_type in (
+                ("episodes", "episodic_memory"),
+                ("profiles", "profile"),
+                ("raw_messages", "raw_message"),
+            ):
+                for raw in data.get(bucket) or []:
+                    item = self._memory_to_item(raw, mem_type)
+                    if item:
+                        memories.append(item)
 
             return {
                 "memories": memories,
-                "total_count": result.get("total_count", len(memories)),
-                "has_more": result.get("has_more", False),
+                "total_count": len(memories),
+                "has_more": False,
             }
         except httpx.HTTPError as e:
             logger.error(f"Failed to search memories: {e}")
             raise
 
-    def _normalize_fetch_memories(
-        self, raw_memories: List[Any], memory_type: str
-    ) -> List[Dict[str, Any]]:
-        """Normalize EverMemOS FetchMemResponse memories to flat MemoryItem list."""
-        items = []
-        for mem in raw_memories:
-            if not isinstance(mem, dict):
-                continue
-            item = self._memory_to_item(mem, memory_type)
-            if item:
-                items.append(item)
-        return items
+    # ------------------------------------------------------------------
+    # internal helpers
+    # ------------------------------------------------------------------
 
-    def _normalize_search_memories(
-        self,
-        raw_memories: List[Any],
-        scores: List[Any],
-    ) -> List[Dict[str, Any]]:
-        """Normalize EverMemOS RetrieveMemResponse memories.
-
-        Search response format: memories is List[Dict[str, List[BaseMemory]]]
-        e.g., [{"episodic_memory": [...], "event_log": [...]}, ...]
-        """
-        items = []
-        for group_idx, group in enumerate(raw_memories):
-            if not isinstance(group, dict):
-                continue
-            for mem_type, mem_list in group.items():
-                if not isinstance(mem_list, list):
-                    continue
-                for mem_idx, mem in enumerate(mem_list):
-                    if not isinstance(mem, dict):
-                        continue
-                    item = self._memory_to_item(mem, mem_type)
-                    if item:
-                        # Attach score if available
-                        try:
-                            score_group = scores[group_idx] if group_idx < len(scores) else {}
-                            score_list = score_group.get(mem_type, [])
-                            if mem_idx < len(score_list):
-                                item["score"] = score_list[mem_idx]
-                        except (IndexError, KeyError, TypeError):
-                            pass
-                        items.append(item)
-        return items
+    @staticmethod
+    def _extract_items(data: Dict[str, Any], memory_type: str) -> List[Dict[str, Any]]:
+        """Pull the relevant list out of a GetMem response payload."""
+        bucket_map = {
+            "episodic_memory": "episodes",
+            "profile": "profiles",
+            "agent_case": "agent_cases",
+            "agent_skill": "agent_skills",
+        }
+        bucket = bucket_map.get(memory_type, "episodes")
+        items = data.get(bucket) or []
+        return [m for m in items if isinstance(m, dict)]
 
     def _memory_to_item(
         self, mem: Dict[str, Any], memory_type: str
     ) -> Optional[Dict[str, Any]]:
-        """Convert a single EverMemOS memory dict to normalized MemoryItem."""
-        mem_id = mem.get("id") or mem.get("episode_id")
+        """Convert a single v1 memory payload to the flat MemoryItem the frontend expects."""
+        mem_id = mem.get("id") or mem.get("episode_id") or mem.get("memory_id")
         if not mem_id:
             return None
 
-        # Determine content based on memory type
-        if memory_type == "episodic_memory":
-            content = mem.get("summary", "")
-            title = mem.get("title") or mem.get("subject") or content[:100]
-        elif memory_type == "event_log":
-            content = mem.get("atomic_fact", "")
-            title = content[:100] if content else "Event Log"
-        elif memory_type == "foresight":
-            content = mem.get("content", "")
-            title = content[:100] if content else "Foresight"
-        else:
-            content = mem.get("content") or mem.get("summary", "")
-            title = mem.get("title") or content[:100]
+        subject = mem.get("subject") or ""
+        summary = mem.get("summary") or ""
+        episode = mem.get("episode") or ""
 
-        # Determine source origin from metadata/group
+        if memory_type == "episodic_memory":
+            content = summary or episode
+            title = subject or summary[:100] or episode[:100] or "Episodic Memory"
+        elif memory_type == "profile":
+            content = summary or mem.get("content", "")
+            title = subject or content[:100] or "Profile"
+        elif memory_type == "raw_message":
+            content = mem.get("content") or episode
+            title = content[:100] if content else "Raw Message"
+        else:
+            content = summary or mem.get("content", "") or episode
+            title = subject or content[:100] or memory_type
+
+        # Derive source origin from group_name when available.
         source_origin = "evermemo"
-        group_name = mem.get("group_name", "")
+        group_name = mem.get("group_name") or ""
         if group_name:
-            gn_lower = group_name.lower()
-            if "browser" in gn_lower or "mymemo" in gn_lower or "attention" in gn_lower:
+            gn = group_name.lower()
+            if "browser" in gn or "mymemo" in gn or "attention" in gn:
                 source_origin = "browser"
-            elif "claude" in gn_lower or "cc" in gn_lower:
+            elif "claude" in gn or "cc" in gn:
                 source_origin = "claude_code"
+
+        # Score is inlined in the item under v1 (not in a separate scores[] array).
+        score = mem.get("score")
+
+        timestamp_raw = mem.get("timestamp") or mem.get("event_time")
+        timestamp = str(timestamp_raw) if timestamp_raw else None
 
         return {
             "id": str(mem_id),
             "memory_type": memory_type,
             "title": title,
-            "summary": mem.get("summary"),
+            "subject": subject or None,
+            "summary": summary or None,
+            "episode": episode or None,
             "content": content,
-            "timestamp": str(mem.get("timestamp", "")) if mem.get("timestamp") else None,
+            "timestamp": timestamp,
             "source_origin": source_origin,
             "group_id": mem.get("group_id"),
-            "group_name": mem.get("group_name"),
+            "group_name": group_name or None,
             "participants": mem.get("participants"),
-            "keywords": mem.get("key_events"),
+            "keywords": mem.get("key_events") or mem.get("keywords"),
+            "score": score,
         }
 
 

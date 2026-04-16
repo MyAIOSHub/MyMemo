@@ -14,7 +14,7 @@ import { AddMemoryToNotebookDialog } from '@/components/sources/AddMemoryToNoteb
 
 type OriginFilter = 'all' | 'browser' | 'claude_code' | 'evermemo'
 
-const MEMORY_TYPES = ['episodic_memory', 'event_log', 'foresight'] as const
+const MEMORY_TYPES = ['episodic_memory', 'profile'] as const
 
 function OriginIcon({ origin }: { origin: string }) {
   switch (origin) {
@@ -101,8 +101,7 @@ export function MemoryTimeline() {
 
   const typeLabels: Record<string, string> = {
     episodic_memory: t.memories?.episodicMemory || 'Episodic Memory',
-    event_log: t.memories?.eventLog || 'Event Log',
-    foresight: t.memories?.foresight || 'Foresight',
+    profile: t.memories?.profile || 'Profile',
   }
 
   const filterOptions: { value: OriginFilter; label: string; icon: React.ReactNode }[] = [

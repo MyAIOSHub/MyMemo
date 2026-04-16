@@ -27,18 +27,15 @@ interface MemoryBrowserProps {
   notebookId: string
 }
 
-const MEMORY_TYPE_VALUES = ['episodic_memory', 'event_log', 'foresight'] as const
+const MEMORY_TYPE_VALUES = ['episodic_memory', 'profile'] as const
 
 const MEMORY_TYPE_LABELS: Record<string, string> = {
   episodic_memory: 'Episodic Memory',
-  event_log: 'Event Log',
-  foresight: 'Foresight',
+  profile: 'Profile',
 }
 
 function getMemoryTypeLabel(value: string, t: any): string {
-  const key = value === 'episodic_memory' ? 'episodicMemory'
-    : value === 'event_log' ? 'eventLog'
-    : 'foresight'
+  const key = value === 'episodic_memory' ? 'episodicMemory' : 'profile'
   return t.memories?.[key] || MEMORY_TYPE_LABELS[value] || value
 }
 

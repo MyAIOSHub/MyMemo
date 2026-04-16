@@ -231,9 +231,21 @@ class Notebook(ObjectModel):
 
 
 class MemoryRef(BaseModel):
-    """Reference to an EverMemOS memory that was imported as a Source."""
+    """Reference to an EverCore (EverOS) memory that was imported as a Source.
+
+    `memory_type` includes both v1 types (episodic_memory, profile) and the
+    legacy v0 types (event_log, foresight) so that existing DB rows imported
+    under v0 still validate when read back.
+    """
     memory_id: str
-    memory_type: Literal["episodic_memory", "event_log", "foresight"] = "episodic_memory"
+    memory_type: Literal[
+        "episodic_memory",
+        "profile",
+        "raw_message",
+        # legacy v0 types — keep for backward compatibility with existing data
+        "event_log",
+        "foresight",
+    ] = "episodic_memory"
     user_id: Optional[str] = None
     source_origin: Literal["browser", "claude_code", "evermemo"] = "evermemo"
     group_id: Optional[str] = None

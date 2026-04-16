@@ -32,28 +32,56 @@ async def import_memories_as_sources(
     notebook_id: str,
     user_id: str,
 ) -> List[Dict[str, Any]]:
-    """Import selected EverMemOS memories as Open Notebook Sources.
+    """Import selected EverCore memories as Open Notebook Sources.
 
     Features:
     - Deduplication: skips memories already imported as Sources
-    - Batch fetch: fetches all memories in one call, then filters by selected IDs
+    - Pages through `browse_memories` until every requested ID is found or
+      the server runs out of memories. v1's GetMemRequest is page-based, so
+      a single fetch can only see one page; for users with >500 memories of
+      the same type we keep paging.
 
     Args:
-        memory_ids: List of EverMemOS memory IDs to import.
-        memory_type: Type of memory (episodic_memory, event_log, foresight).
+        memory_ids: List of EverCore memory IDs to import.
+        memory_type: Type of memory (episodic_memory, profile).
         notebook_id: Target notebook to link sources to.
-        user_id: EverMemOS user ID for fetching memories.
+        user_id: EverCore user ID for fetching memories.
 
     Returns:
         List of created source info dicts with id, title, status.
     """
-    # Batch fetch memories of this type
-    browse_result = await memory_service.browse_memories(
-        user_id=user_id,
-        memory_type=memory_type,
-        limit=500,
-    )
-    all_memories = {m["id"]: m for m in browse_result.get("memories", [])}
+    PAGE_SIZE = 100
+    MAX_PAGES = 50  # hard ceiling: 50 * 100 = 5000 memories per import session
+    wanted = set(memory_ids)
+    all_memories: Dict[str, Dict[str, Any]] = {}
+    offset = 0
+    for _ in range(MAX_PAGES):
+        page = await memory_service.browse_memories(
+            user_id=user_id,
+            memory_type=memory_type,
+            limit=PAGE_SIZE,
+            offset=offset,
+        )
+        for m in page.get("memories", []):
+            mid = m.get("id")
+            if mid:
+                all_memories[mid] = m
+        # Stop early once every requested ID has been located.
+        if wanted.issubset(all_memories.keys()):
+            break
+        if not page.get("has_more"):
+            break
+        offset += PAGE_SIZE
+    if not wanted.issubset(all_memories.keys()):
+        missing = wanted - all_memories.keys()
+        logger.warning(
+            "import_memories: %d of %d requested IDs not found after paging "
+            "(possibly beyond MAX_PAGES=%d window): %s",
+            len(missing),
+            len(wanted),
+            MAX_PAGES,
+            sorted(missing)[:5],
+        )
 
     created_sources = []
 
@@ -99,16 +127,18 @@ async def _create_source_from_memory(
     memory: Dict[str, Any],
     notebook_id: str,
 ) -> Source:
-    """Create a Source from a normalized MemoryItem dict."""
-    title = memory.get("title", "Untitled Memory")
+    """Create a Source from a normalized MemoryItem dict (v1 EverOS shape)."""
+    title = memory.get("title") or memory.get("subject") or "Untitled Memory"
     content = memory.get("content", "")
 
-    # Build full text from available fields
-    full_text_parts = []
-    if memory.get("summary"):
-        full_text_parts.append(memory["summary"])
-    if content and content != memory.get("summary"):
-        full_text_parts.append(content)
+    # Build full text from v1 fields: subject -> summary -> episode -> content.
+    full_text_parts: List[str] = []
+    seen: set[str] = set()
+    for key in ("subject", "summary", "episode", "content"):
+        value = memory.get(key)
+        if value and value not in seen:
+            full_text_parts.append(value)
+            seen.add(value)
     if memory.get("keywords"):
         full_text_parts.append("Key events: " + ", ".join(memory["keywords"]))
 

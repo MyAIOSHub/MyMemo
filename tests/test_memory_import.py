@@ -207,7 +207,7 @@ class TestMemoryRefConstruction:
         """MemoryRef builds correctly with all fields."""
         ref = MemoryRef(
             memory_id="mem-abc",
-            memory_type="event_log",
+            memory_type="profile",
             user_id="user-1",
             source_origin="browser",
             group_id="g1",
@@ -215,7 +215,7 @@ class TestMemoryRefConstruction:
             original_timestamp="2026-03-25T10:00:00",
         )
         assert ref.memory_id == "mem-abc"
-        assert ref.memory_type == "event_log"
+        assert ref.memory_type == "profile"
         assert ref.source_origin == "browser"
         assert ref.user_id == "user-1"
         assert ref.group_id == "g1"
@@ -227,6 +227,12 @@ class TestMemoryRefConstruction:
         ref = MemoryRef(memory_id="mem-def")
         assert ref.memory_type == "episodic_memory"
         assert ref.source_origin == "evermemo"
+
+    def test_memory_ref_legacy_types_still_validate(self):
+        """Legacy v0 memory types must remain readable for existing DB rows."""
+        for legacy in ("event_log", "foresight"):
+            ref = MemoryRef(memory_id="legacy", memory_type=legacy)
+            assert ref.memory_type == legacy
         assert ref.user_id is None
         assert ref.group_id is None
 
