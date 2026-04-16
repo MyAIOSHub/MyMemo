@@ -346,6 +346,19 @@ def main():
     parser.add_argument("--list-skills", action="store_true", help="List available skills and exit")
     parser.add_argument("--list-subagents", action="store_true", help="List available subagents and exit")
 
+    # Meeting mode
+    parser.add_argument("--meeting", type=str, default=None,
+                        choices=["brief", "think", "chat", "summary", "writeback"],
+                        help="Meeting mode: brief (pre), think (during), chat (during), summary (post), writeback (post)")
+    parser.add_argument("--topic", type=str, default=None, help="Meeting topic")
+    parser.add_argument("--participants", type=str, default=None, help="Comma-separated participant names")
+    parser.add_argument("--agenda", type=str, default=None, help="Comma-separated agenda items")
+    parser.add_argument("--scheduled-at", type=str, default=None, help="Meeting scheduled time")
+    parser.add_argument("--transcript", type=str, default=None, help="Path to meeting transcript .md file")
+    parser.add_argument("--auto-rules", action="store_true", help="Enable automatic trigger rule evaluation")
+    parser.add_argument("--question", type=str, default=None, help="Question for meeting chat mode")
+    parser.add_argument("--output", type=str, default=None, help="Output file path for summary")
+
     args = parser.parse_args()
 
     if args.list_skills:
@@ -374,6 +387,11 @@ def main():
         except ImportError:
             emit({"type": "error", "message": "subagents.py not found"})
         return
+
+    # Meeting mode dispatch
+    if args.meeting:
+        from meeting import run_meeting_command
+        sys.exit(run_meeting_command(args))
 
     if args.stdin:
         prompt = sys.stdin.read().strip()
