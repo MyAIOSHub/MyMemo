@@ -118,7 +118,58 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-Tools: `search_memories`, `browse_memories`, `store_memory`, `check_hub_status`
+Tools: `search_memories`, `browse_memories`, `store_memory`, `refresh_memory_docs`, `check_hub_status`
+
+## Agent System (Claude Agent SDK)
+
+MyMemo includes a standalone agent powered by Claude Agent SDK with **8 subagents** and **167 skills**.
+
+### Subagents
+
+| Subagent | Skills | Scene |
+|---|---|---|
+| `code-dev` | 61 | Code review, debugging, testing, architecture, full-stack |
+| `project-manager` | 22 | Planning, task breakdown, git workflow, CI/CD, shipping |
+| `meeting-advisor` | 19 | Decision making, Socratic questioning, risk analysis, synthesis |
+| `content-creator` | 18 | Articles, WeChat, social media, copywriting, novels |
+| `deep-thinker` | 16 | First principles, five whys, roundtable debate, analogies |
+| `business-strategist` | 15 | Market sizing, competitive analysis, unit economics, JTBD |
+| `memory-manager` | 15 | Store, recall, search, organize, generate insights |
+| `learning-researcher` | 8 | Study notes, flashcards, literature review, paper analysis |
+
+### Usage
+
+```bash
+cd agent/
+
+# Route to a subagent
+python3 agent.py -a meeting-advisor "should we use Kafka or SQS?"
+python3 agent.py -a business-strategist "evaluate the AI memory assistant market"
+python3 agent.py -a code-dev -s code-reviewer "review this PR"
+
+# Direct skill
+python3 agent.py -s ljg-roundtable "discuss memory architecture"
+
+# With memory context
+python3 agent.py -a project-manager "plan MyMemo v2 development"
+
+# List all
+python3 agent.py --list-subagents
+python3 agent.py --list-skills
+```
+
+### Memory .md Materialization
+
+Memories are materialized from EverCore into topic-based `.md` files for intent-driven retrieval:
+
+```bash
+# Manual refresh
+cd memory-hub-mcp/ && python materializer.py
+
+# Auto: SessionStart hook checks freshness (30min TTL) and refreshes if stale
+```
+
+Output: `memory-docs/INDEX.md` + `project-*.md` + `user-preferences.md` + `recent-focus.md`
 
 ## Agent Integration
 
@@ -211,25 +262,48 @@ All services are internal to Docker network. Only port 1995 is exposed.
 
 ```
 MyMemo/
+├── agent/                        # Claude Agent SDK assistant
+│   ├── agent.py                  #   CLI entry — NDJSON output, subagent dispatch
+│   ├── subagents.py              #   8 subagent definitions (167 skills mapped)
+│   ├── requirements.txt          #   claude-agent-sdk + httpx
+│   └── skills/                   #   167 skills in 16 categories
+│       ├── coding/               #     code-reviewer, security-auditor, test-engineer
+│       ├── meeting/              #     19 meeting analysis skills
+│       ├── thinking/             #     16 deep reasoning frameworks
+│       ├── engineering/          #     21 software engineering skills
+│       ├── workflow/             #     15 dev workflow skills
+│       ├── marketing/            #     6 business/marketing skills
+│       ├── diagnosis/            #     9 diagnostic skills
+│       ├── content/              #     6 content creation skills
+│       ├── wechat/               #     12 WeChat publishing skills
+│       ├── dev-tools/            #     26 development tools
+│       ├── learning/             #     8 learning/research skills
+│       ├── clawiser/             #     8 memory management skills
+│       ├── insight/              #     5 insight generation skills
+│       ├── commands/             #     7 command skills
+│       ├── references/           #     4 checklists
+│       └── memory/               #     2 memory-specific skills
 ├── .claude/
-│   ├── hooks/                    # Claude Code auto-memory hooks
-│   │   ├── inject-memories.js    #   UserPromptSubmit → search + inject
-│   │   ├── store-memories.js     #   Stop → extract + store
-│   │   └── session-context.js    #   SessionStart → load recent
+│   ├── hooks/                    #   Claude Code auto-memory hooks
+│   │   ├── session-context.js    #     SessionStart → materialize + inject INDEX
+│   │   ├── inject-memories.js    #     UserPromptSubmit → LLM intent route → read .md
+│   │   └── store-memories.js     #     Stop → extract + store to EverCore
 │   └── settings.json             #   Hook registration
-├── memory-hub-mcp/               # MCP server for Claude Code / Cline
-│   ├── memory_hub_mcp.py         #   4 tools: search/browse/store/status
+├── memory-hub-mcp/               # MCP server (5 tools)
+│   ├── memory_hub_mcp.py         #   search/browse/store/refresh/status
+│   ├── materializer.py           #   EverCore → topic .md files
 │   └── pyproject.toml
+├── memory-docs/                  # Materialized .md files (gitignored, auto-generated)
+│   ├── INDEX.md                  #   File index with summaries
+│   ├── project-*.md              #   Per-project knowledge docs
+│   ├── user-preferences.md       #   User profile
+│   └── recent-focus.md           #   Last 3 days activity
 ├── EverMemOS/                    # Vendored EverCore engine (gitignored)
-│   ├── src/                      #   Memory pipeline source
-│   └── examples/
-│       └── openclaw-plugin/      #   OpenClaw ContextEngine plugin
 ├── cchistory/                    # Claude Code session importer (gitignored)
 ├── MyAttention-local-store/      # Browser attention collector (gitignored)
 ├── docker-compose.memory-hub.yml # Full Memory Hub stack
 ├── memory-hub.env.example        # Environment template
-├── memory-hub.env                # Runtime config (gitignored, has keys)
-└── MEMORY_HUB.md                 # Detailed Memory Hub documentation
+└── MEMORY_HUB.md                 # Memory Hub documentation
 ```
 
 ## Powered By

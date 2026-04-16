@@ -152,3 +152,4 @@ gateway/
 # Desktop build artifacts
 desktop/dist/
 desktop/node_modules/
+memory-docs/
