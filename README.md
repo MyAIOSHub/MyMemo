@@ -171,6 +171,57 @@ cd memory-hub-mcp/ && python materializer.py
 
 Output: `memory-docs/INDEX.md` + `project-*.md` + `user-preferences.md` + `recent-focus.md`
 
+## Meeting Mode
+
+Full meeting lifecycle with memory-driven closed loop: **pre → during → post → memory writeback → next meeting**.
+
+### Pre-meeting briefing
+
+```bash
+python3 agent.py --meeting brief --topic "Q3产品评审" \
+  --participants "张总,李产品,王设计" --agenda "功能方案,优先级"
+```
+
+Generates: purpose, background from memory, related files, suggested questions.
+
+### During-meeting thinking
+
+```bash
+# Manual trigger
+python3 agent.py --meeting think --transcript meeting.md
+
+# With auto rule evaluation (silence, repeated debate, missing owner, etc.)
+python3 agent.py --meeting think --transcript meeting.md --auto-rules
+```
+
+3 card types: **critical thinking** (challenge assumptions) / **prompter** (break silence) / **deep probe** (soul questions).
+
+4 built-in trigger rules (ported from MyIsland): repeated_debate, missing_owner, unclear_problem, no_convergence.
+
+Route engine: 8 themes × 8 subtasks → 10 meeting subagents (socratic, critic, decision, risk, business...) → skill selection.
+
+### During-meeting chat
+
+```bash
+python3 agent.py --meeting chat --transcript meeting.md --question "赵研发提的成本问题有解决方案吗?"
+```
+
+### Post-meeting summary
+
+```bash
+python3 agent.py --meeting summary --transcript meeting.md --output minutes.md
+```
+
+Structured output: chapters, action items (with owners), decisions, speaker viewpoints.
+
+### Memory writeback (close the loop)
+
+```bash
+python3 agent.py --meeting writeback --transcript meeting.md
+```
+
+Writes transcript to EverCore → materializer refreshes `memory-docs/` → next meeting reads updated project knowledge.
+
 ## Agent Integration
 
 ### Claude Code — Hooks (full auto)
@@ -263,8 +314,11 @@ All services are internal to Docker network. Only port 1995 is exposed.
 ```
 MyMemo/
 ├── agent/                        # Claude Agent SDK assistant
-│   ├── agent.py                  #   CLI entry — NDJSON output, subagent dispatch
+│   ├── agent.py                  #   CLI entry — NDJSON output, subagent dispatch, meeting mode
 │   ├── subagents.py              #   8 subagent definitions (167 skills mapped)
+│   ├── meeting.py                #   MeetingOrchestrator — routing, rules, briefing, thinking, summary
+│   ├── meeting_models.py         #   Data models (MeetingRecord, AdviceCard, TriggerContext...)
+│   ├── meeting_prompts.py        #   5 LLM prompt templates (briefing/thinking/chat/summary/route)
 │   ├── requirements.txt          #   claude-agent-sdk + httpx
 │   └── skills/                   #   167 skills in 16 categories
 │       ├── coding/               #     code-reviewer, security-auditor, test-engineer
