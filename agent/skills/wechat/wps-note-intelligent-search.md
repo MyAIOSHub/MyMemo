@@ -1,0 +1,396 @@
+---
+name: wps-deep-search
+description: |
+  【深度搜索】深挖笔记关联，构建知识图谱的 WPS 笔记查询助手。
+  当用户说"深度搜索""帮我深挖""关联查询""全面梳理"时使用。
+  支持跨笔记关联挖掘、语义发散扩展、知识沉淀，不同于简单关键词匹配。
+  不要用于单关键词查询（那用 search_notes MCP 工具）。
+metadata:
+  version: "1.0.0"
+  category: search
+  tags: [search, deep-search, knowledge-graph, note-analysis]
+  dependencies: [wps-note]
+---
+
+## Contract（契约）
+
+### Input Contract
+- **类型**: 自然语言查询或结构化搜索请求
+- **必填字段**:
+  - `query`: 用户搜索意图描述（自然语言或关键词）
+- **可选字段**:
+  - `context`: 当前对话上下文，用于消歧
+  - `filters`: 过滤条件对象（时间范围、标签、笔记类型等）
+  - `max_results`: 最大返回结果数，默认 10
+  - `search_depth`: 搜索深度（quick/standard/deep），默认 standard
+- **验证规则**:
+  - query 长度 >= 2 个字符
+  - max_results 范围 1-100
+
+### Output Contract
+- **类型**: 结构化搜索结果
+- **保证字段**:
+  - `results`: 笔记列表（含相关性分数）
+  - `search_dimensions`: 实际使用的搜索维度
+  - `reasoning`: 搜索策略说明
+- **约束**:
+  - 结果按相关性降序排列
+  - 每个结果包含笔记 ID、标题、摘要、匹配原因
+
+### Error Handling
+- **无效查询** → 返回 400，提示优化建议
+- **无匹配结果** → 返回空列表 + 扩展搜索建议
+- **MCP 调用失败** → 返回 503，启用本地降级策略
+
+## 与 wps-note 的关系
+
+本 Skill 是 `wps-note` 基础能力层的**场景封装层**，复用其底层搜索能力，专注于**深度搜索场景**：
+
+- **不重复定义底层操作**：直接调用 `wps-note` 的 MCP 工具
+- **增加智能层**：意图解析、策略规划、结果关联分析
+- **场景化封装**：将多个 MCP 工具调用编排为完整深度搜索流程
+
+---
+
+## 常用编排模式
+
+### 模式 1：时间范围 + 主题搜索
+
+适用于查找特定时间段的相关内容：
+
+```
+意图解析 → search_notes({ keyword, since, before }) → find_tags → 结果聚合
+```
+
+### 模式 2：跨笔记关联挖掘
+
+适用于主题探索，发现分散在多篇笔记中的相关内容：
+
+```
+意图解析 → 扩展关键词 → 并行 search_notes（多组关键词） → 去重聚合 → find_tags → 结果排序
+```
+
+### 模式 3：单笔记内精确查找
+
+已知笔记范围，查找具体段落：
+
+```
+search_notes({ keyword }) → note_id → search_note_content({ note_id, query }) → read_blocks → 展示具体段落
+```
+
+---
+
+## 工具列表与调用方式
+
+本 Skill 复用 `wps-note` 的 MCP 工具执行深度搜索：
+
+| 工具名 | 用途 | MCP 调用 |
+|--------|------|----------|
+| `search_notes` | 笔记全文搜索（关键词、标签、时间范围） | `mcp__wpsnote__search_notes` |
+| `search_note_content` | 单笔记内容精确搜索 | `mcp__wpsnote__search_note_content` |
+| `get_note_outline` | 获取笔记结构大纲 | `mcp__wpsnote__get_note_outline` |
+| `get_note_info` | 批量获取笔记元数据 | `mcp__wpsnote__get_note_info` |
+| `find_tags` | 标签查找 | `mcp__wpsnote__find_tags` |
+
+### MCP 工具调用示例
+
+#### 1. 带时间范围的搜索
+
+```
+search_notes({
+  keyword: "项目规划",
+  since: "2025-03-01T00:00:00Z",
+  before: "2025-03-07T23:59:59Z",
+  sort: "update_time",
+  direction: "desc",
+  limit: 20
+})
+→ {
+  notes: [
+    { note_id: "abc123", title: "Q1 项目规划", update_time: "..." },
+    ...
+  ]
+}
+```
+
+#### 2. 标签 + 关键词联合搜索
+
+```
+search_notes({
+  keyword: "会议纪要",
+  tags: ["工作"],
+  since: "2025-02-01T00:00:00Z"
+})
+→ 返回同时满足：包含"会议纪要" + 标签为"工作" + 2月后的笔记
+```
+
+#### 3. 单笔记内容精确搜索
+
+```
+search_notes({ keyword: "前端架构" }) → note_id: "xyz789"
+
+search_note_content({
+  note_id: "xyz789",
+  query: "React 组件设计",
+  max_results: 10
+})
+→ [
+  { block_id: "p1aBc2De3F", type: "paragraph", preview: "...React 组件..." },
+  ...
+]
+
+# 读取具体段落
+read_blocks({ note_id: "xyz789", block_ids: ["p1aBc2De3F"] })
+```
+
+#### 4. 获取笔记元数据批量确认
+
+```
+search_notes({ keyword: "项目" }) → note_ids: ["id1", "id2", "id3"]
+
+get_note_info({ note_ids: ["id1", "id2", "id3"] })
+→ [
+  { note_id: "id1", title: "...", word_count: 1200, tags: ["工作"] },
+  ...
+]
+```
+
+#### 5. 标签发现
+
+```
+find_tags({ keyword: "前端" })
+→ [
+  { id: "tag1", name: "前端技术" },
+  { id: "tag2", name: "前端架构" }
+]
+```
+
+## Workflow（工作流程）
+
+### 步骤 1：意图解析
+分析用户深度查询意图，提取挖掘维度：
+
+**时间维度识别：**
+- "今天" → since=today, before=today
+- "昨天/昨日" → since=yesterday, before=yesterday
+- "本周" → since=this_week_start, before=now
+- "上周" → since=last_week_start, before=last_week_end
+- "本月" → since=this_month_start, before=now
+- "最近/近期" → since=7_days_ago, before=now
+
+**标签维度识别：**
+- 提取以 # 开头的标签，如 #项目 #会议
+
+**关键词提取：**
+- 去除时间词、停用词（的、笔记、关于、查找等）
+- 保留核心搜索词
+
+### 步骤 2：策略规划
+根据意图选择搜索策略：
+
+| 意图类型 | 策略 | 搜索维度 |
+|----------|------|----------|
+| 查找特定笔记 | 精确匹配 | 标题 + 关键词 |
+| 时间范围查询 | 时间过滤 | 时间范围 + 关键词 |
+| 主题探索 | 发散搜索 | 关键词 + 标签 + 相关概念 |
+| 任务聚合 | 多关键词 | 同义词并行搜索 |
+
+### 步骤 3：执行深度挖掘
+1. 调用 `search_notes` 执行多维度深度查询
+2. 如有需要，调用 `find_tags` 获取相关标签
+3. 对高相关性笔记，调用 `get_note_outline` 获取结构信息
+4. 聚合、去重、排序结果
+
+### 步骤 4：结果呈现
+1. 生成结果摘要，说明使用的挖掘维度
+2. 为每个结果提供匹配原因
+3. 提供关联建议（相关标签、相关笔记）
+
+> **关键验证点**: 每次深度查询必须说明使用了哪些维度，便于用户理解结果来源
+
+## Scripts（外部脚本）
+
+scripts/ 目录包含轻量级 CLI 工具，通过 subprocess 调用，不进入 Context Window：
+
+### 意图解析脚本
+```bash
+python scripts/__init__.py parse --query "上周的会议纪要"
+```
+
+输出：
+```json
+{
+  "query": "上周的会议纪要",
+  "keywords": "会议纪要",
+  "time_range": {
+    "since": "last_week_start",
+    "before": "last_week_end"
+  },
+  "tags": null,
+  "max_results": 10
+}
+```
+
+### 资产管理脚本
+```bash
+# 读取资产
+python scripts/asset_manager.py read search_patterns.json
+
+# 写入资产
+python scripts/asset_manager.py write search_patterns.json --data '{"patterns":[]}'
+
+# 列出资产
+python scripts/asset_manager.py list
+```
+
+资产存储位置：`~/.claude/wps-search-assets/`
+
+## Examples（使用示例）
+
+### 示例 1：模糊查询
+**输入**: "深度搜索：上周关于项目规划的内容"
+
+**执行过程**:
+1. 解析意图：时间维度（上周）+ 主题维度（项目规划）
+2. 调用 `search_notes`：
+   - 关键词："项目规划"
+   - 时间范围：上周（自动计算日期范围）
+3. 调用 `find_tags`：查找与"项目"、"规划"相关的标签
+4. 聚合结果，按时间+相关性排序
+
+**输出**:
+```
+找到 5 条相关笔记：
+1. [项目规划-2024Q1] - 匹配：时间(上周) + 主题(项目规划)
+2. [产品路线图讨论] - 匹配：主题相关(规划)
+3. ...
+挖掘维度：关键词 + 时间范围 + 标签关联
+```
+
+### 示例 2：关联挖掘（展示跨笔记关联）
+**输入**: "深度搜索：和前端架构相关的所有内容"
+
+**执行过程**:
+1. 解析意图：主题维度（前端架构）
+2. 发散扩展：
+   - 核心词："前端"、"架构"
+   - 扩展词："React"、"Vue"、"组件"、"工程化"、"性能优化"
+3. 并行调用 `search_notes`：
+   - 查询 1：关键词 "前端" + "架构"
+   - 查询 2：关键词 "组件" + "设计"
+   - 查询 3：关键词 "工程化"
+4. 调用 `find_tags`：查找技术相关标签
+5. 聚合去重，计算综合相关性
+
+**输出**:
+```
+找到 8 条跨笔记相关内容：
+1. [前端技术选型] - 直接匹配：前端架构
+2. [组件库设计规范] - 扩展匹配：组件设计
+3. [前端性能优化方案] - 扩展匹配：工程化
+4. [React 最佳实践] - 标签关联：前端技术
+...
+挖掘维度：关键词(3组) + 标签关联 + 语义扩展
+关联挖掘说明：除直接匹配外，还扩展了组件、工程化、性能等相关内容
+```
+
+### 示例 3：任务型深度查询
+**输入**: "深度搜索：整理我所有的待办事项"
+
+**执行过程**:
+1. 解析意图：任务类型（待办事项）
+2. 多关键词并行搜索：
+   - "待办"、"待办事项"、"TODO"、"任务清单"
+3. 对找到的笔记，调用 `search_note_content` 定位具体待办段落
+4. 聚合展示
+
+**输出**:
+```
+在 3 条笔记中找到待办事项：
+1. [每日工作计划] - 包含 5 项待办
+2. [项目跟进清单] - 包含 3 项待办
+3. [会议待办] - 包含 2 项待办
+挖掘维度：多关键词任务类型深度匹配
+```
+
+---
+
+## Troubleshooting
+
+### 搜索结果为空
+
+**现象**：`search_notes` 返回空数组
+**原因**：关键词太具体、时间范围太窄、没有匹配标签
+**解决**：
+1. 尝试更通用的关键词（如"前端架构"→"前端"）
+2. 移除时间限制或扩大范围
+3. 使用 `find_tags` 查看可用标签
+4. 尝试同义词或相关概念搜索
+
+### 结果太多无法筛选
+
+**现象**：返回 50+ 条笔记，用户难以处理
+**原因**：关键词太宽泛、没有限定条件
+**解决**：
+1. 引导用户增加限定词（如添加人名、项目名称）
+2. 使用时间范围缩小范围
+3. 按标签进一步过滤
+4. 展示摘要让用户选择最相关的
+
+### 关联挖掘找不到相关内容
+
+**现象**：扩展关键词后仍然没有相关笔记
+**原因**：笔记库中确实缺乏相关内容、扩展方向不对
+**解决**：
+1. 调整扩展关键词方向
+2. 询问用户是否有特定笔记可能相关
+3. 建议用户补充相关笔记到知识库
+4. 降级为简单关键词搜索
+
+### 单笔记内搜索无结果
+
+**现象**：`search_note_content` 返回空
+**原因**：笔记确实不包含该关键词、关键词拼写错误
+**解决**：
+1. 先用 `read_note` 或 `get_note_outline` 确认笔记内容
+2. 尝试同义词搜索
+3. 检查笔记是否为图片/PDF（不可搜索）
+
+### MCP 工具调用失败
+
+**现象**：`search_notes` 等工具报错
+**原因**：参数格式错误、EDITOR_NOT_READY、网络问题
+**解决**：
+1. 检查参数格式（时间格式 ISO 8601、标签格式等）
+2. 确保 WPS 笔记应用正常运行
+3. 参考 `wps-note` SKILL 的 Troubleshooting
+4. 错误码速查：
+   - `INVALID_PARAMS`: 检查参数类型和格式
+   - `RATE_LIMITED`: 等待 60 秒后重试
+   - `INTERNAL_ERROR`: 调用 `get_mcp_logs` 查看详情
+
+### 时间范围解析错误
+
+**现象**：用户说"上周"但搜索范围不对
+**原因**：时间计算错误、时区问题
+**解决**：
+1. 明确确认用户意图（具体日期范围）
+2. 使用脚本 `scripts/__init__.py parse` 辅助解析
+3. 日期边界检查（since ≤ before）
+
+### 结果排序不符合预期
+
+**现象**：最相关的笔记不在前面
+**原因**：排序策略不合适、相关性算法局限
+**解决**：
+1. 尝试不同排序方式（`sort`: update_time / relevance）
+2. 手动调整结果顺序（基于匹配维度数量）
+3. 向用户说明排序逻辑
+
+---
+
+## Resources（资源引用）
+
+- 架构设计: [references/architecture.md](references/architecture.md)
+- 契约详情: [references/contract.md](references/contract.md)
+- 外部脚本: [scripts/](scripts/)

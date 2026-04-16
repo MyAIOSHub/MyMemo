@@ -1,0 +1,18 @@
+[project]
+name = "memory-hub-mcp"
+version = "0.1.0"
+description = "MCP server for EverCore (EverOS) Memory Hub — search, browse, and store long-term memories"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+]
+
+[project.scripts]
+memory-hub-mcp = "memory_hub_mcp:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
