@@ -271,6 +271,34 @@ curl -X POST http://localhost:1995/api/v1/memories/get \
   -d '{"memory_type":"episodic_memory","page":1,"page_size":10,"filters":{"user_id":"mymemo_user"}}'
 ```
 
+### MemoDesktop — Desktop Client
+
+Port **`1995`** is the single integration point for **MemoDesktop** and any other desktop client. Point the client's Memory Hub URL to `http://localhost:1995` and it gets full access to browse / search / store memories via the same HTTP API above.
+
+Recommended client config:
+
+```jsonc
+{
+  "memoryHub": {
+    "url": "http://localhost:1995",
+    "userId": "mymemo_user"
+  }
+}
+```
+
+Endpoint surface visible to the desktop:
+
+| Path | Method | Use |
+|------|--------|-----|
+| `/health` | GET | Connectivity probe |
+| `/api/v1/memories/search` | POST | Semantic / keyword / hybrid search |
+| `/api/v1/memories/get` | POST | Paginated browse by `memory_type` |
+| `/api/v1/memories` | POST | Store new memory |
+| `/cc/*` | GET/POST | Claude Code history sync status + import |
+| `/local-store/*` | GET/POST | MyAttention local-store (browser attention) |
+
+No auth is enforced on port 1995 by default — bind it to `127.0.0.1` only (Docker does this) and treat it as a local-machine integration bus. If the desktop client runs on a different machine, put an auth-aware reverse proxy in front.
+
 ## Services
 
 | Service | Port | Description |
