@@ -35,7 +35,7 @@ services:
     restart: always
 
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: myaioshub/mymemo:v1-latest
     pull_policy: always
     ports:
       - "8502:8502"  # Web UI

@@ -18,8 +18,8 @@
 #   5. Configure in UI: Settings → API Keys → Add OpenAI-Compatible
 #
 # Full documentation:
-# - TTS setup: https://github.com/lfnovo/open-notebook/blob/main/docs/5-CONFIGURATION/local-tts.md
-# - STT setup: https://github.com/lfnovo/open-notebook/blob/main/docs/5-CONFIGURATION/local-stt.md
+# - TTS setup: https://github.com/MyAIOSHub/MyMemo/blob/main/docs/5-CONFIGURATION/local-tts.md
+# - STT setup: https://github.com/MyAIOSHub/MyMemo/blob/main/docs/5-CONFIGURATION/local-stt.md
 
 services:
   surrealdb:
@@ -47,7 +47,7 @@ services:
     # and add GPU device mapping (see docs/5-CONFIGURATION/local-tts.md)
 
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: myaioshub/mymemo:v1-latest
     ports:
       - "8502:8502"
       - "5055:5055"

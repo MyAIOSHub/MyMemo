@@ -38,7 +38,7 @@ services:
       - ./surreal_data:/mydata
 
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest-single
+    image: myaioshub/mymemo:v1-latest-single
     pull_policy: always
     ports:
       - "8502:8502"  # Web UI (React frontend)

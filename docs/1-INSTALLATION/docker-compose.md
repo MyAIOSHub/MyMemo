@@ -2,7 +2,7 @@
 
 Multi-container setup with separate services. **Best for most users.**
 
-> **Alternative Registry:** All images are available on both Docker Hub (`lfnovo/open_notebook`) and GitHub Container Registry (`ghcr.io/lfnovo/open-notebook`). Use GHCR if Docker Hub is blocked or you prefer GitHub-native workflows.
+> **Alternative Registry:** All images are available on both Docker Hub (`myaioshub/mymemo`) and GitHub Container Registry (`ghcr.io/myaioshub/mymemo`). Use GHCR if Docker Hub is blocked or you prefer GitHub-native workflows.
 
 ## Prerequisites
 
@@ -14,12 +14,12 @@ Multi-container setup with separate services. **Best for most users.**
 
 **Option A: Download from repository**
 ```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/lfnovo/open-notebook/main/docker-compose.yml
+curl -o docker-compose.yml https://raw.githubusercontent.com/MyAIOSHub/MyMemo/main/docker-compose.yml
 ```
 
 **Option B: Use the official file from the repo**
 
-The official `docker-compose.yml` is in the root of our repository: [View on GitHub](https://github.com/lfnovo/open-notebook/blob/main/docker-compose.yml)
+The official `docker-compose.yml` is in the root of our repository: [View on GitHub](https://github.com/MyAIOSHub/MyMemo/blob/main/docker-compose.yml)
 
 Copy that file to your project folder.
 
@@ -43,7 +43,7 @@ services:
     pull_policy: always
 
   open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+    image: myaioshub/mymemo:v1-latest
     ports:
       - "8502:8502"  # Web UI
       - "5055:5055"  # REST API
@@ -148,7 +148,7 @@ Instead of manually editing, use our ready-made example:
 
 ```bash
 # Download the Ollama example
-curl -o docker-compose.yml https://raw.githubusercontent.com/lfnovo/open-notebook/main/examples/docker-compose-ollama.yml
+curl -o docker-compose.yml https://raw.githubusercontent.com/MyAIOSHub/MyMemo/main/examples/docker-compose-ollama.yml
 
 # Or copy from repo
 cp examples/docker-compose-ollama.yml docker-compose.yml
@@ -354,5 +354,5 @@ For production use, see:
 ## Getting Help
 
 - **Discord**: [Community support](https://discord.gg/37XJPXfz2w)
-- **Issues**: [GitHub Issues](https://github.com/lfnovo/open-notebook/issues)
+- **Issues**: [GitHub Issues](https://github.com/MyAIOSHub/MyMemo/issues)
 - **Docs**: [Full documentation](../index.md)

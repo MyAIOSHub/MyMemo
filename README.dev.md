@@ -6,7 +6,7 @@ This guide is for developers working on Open Notebook. For end-user documentatio
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/lfnovo/open-notebook.git
+git clone https://github.com/MyAIOSHub/MyMemo.git
 cd open-notebook
 
 # 2. Copy environment files
@@ -135,13 +135,13 @@ make docker-build-local
 ```
 
 This creates two tags:
-- `lfnovo/open_notebook:<version>` (from pyproject.toml)
-- `lfnovo/open_notebook:local`
+- `myaioshub/mymemo:<version>` (from pyproject.toml)
+- `myaioshub/mymemo:local`
 
 ### Run Locally
 
 ```bash
-docker run -p 5055:5055 -p 3000:3000 lfnovo/open_notebook:local
+docker run -p 5055:5055 -p 3000:3000 myaioshub/mymemo:local
 ```
 
 ### When to Use
@@ -440,7 +440,7 @@ make clean-cache
 
 - **Documentation:** https://open-notebook.ai
 - **Discord:** https://discord.gg/37XJPXfz2w
-- **Issues:** https://github.com/lfnovo/open-notebook/issues
+- **Issues:** https://github.com/MyAIOSHub/MyMemo/issues
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Maintainer Guide:** [MAINTAINER_GUIDE.md](MAINTAINER_GUIDE.md)
 

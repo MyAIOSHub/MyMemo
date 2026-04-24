@@ -169,7 +169,7 @@ services:
     command: --api --listen
 
   open-notebook:
-    image: lfnovo/open_notebook:v1-latest-single
+    image: myaioshub/mymemo:v1-latest-single
     pull_policy: always
     depends_on:
       - text-gen
@@ -213,7 +213,7 @@ services:
               capabilities: [gpu]
 
   open-notebook:
-    image: lfnovo/open_notebook:v1-latest-single
+    image: myaioshub/mymemo:v1-latest-single
     pull_policy: always
     depends_on:
       - vllm
