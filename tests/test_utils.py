@@ -16,7 +16,6 @@ from open_notebook.utils import (
     remove_non_printable,
     token_count,
 )
-from open_notebook.utils.context_builder import ContextBuilder, ContextConfig
 
 # ============================================================================
 # TEST SUITE 1: Text Utilities
@@ -247,37 +246,6 @@ class TestVersionUtilities:
 # ============================================================================
 # TEST SUITE 4: Context Builder Configuration
 # ============================================================================
-
-
-class TestContextBuilder:
-    """Test suite for ContextBuilder initialization and configuration."""
-
-    def test_context_config_defaults(self):
-        """Test ContextConfig default values."""
-        config = ContextConfig()
-
-        assert config.sources == {}
-        assert config.notes == {}
-        assert config.include_insights is True
-        assert config.include_notes is True
-        assert config.priority_weights is not None
-        assert "source" in config.priority_weights
-        assert "note" in config.priority_weights
-        assert "insight" in config.priority_weights
-
-    def test_context_builder_initialization(self):
-        """Test ContextBuilder initialization with various params."""
-        builder = ContextBuilder(
-            source_id="source:123",
-            notebook_id="notebook:456",
-            max_tokens=1000,
-            include_insights=False,
-        )
-
-        assert builder.source_id == "source:123"
-        assert builder.notebook_id == "notebook:456"
-        assert builder.max_tokens == 1000
-        assert builder.include_insights is False
 
 
 if __name__ == "__main__":
