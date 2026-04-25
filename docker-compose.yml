@@ -12,24 +12,28 @@ services:
     restart: always
     pull_policy: always
 
-  open_notebook:
-    image: lfnovo/open_notebook:v1-latest
+  mymemo:
+    image: myaioshub/mymemo:v1-latest
     ports:
-      - "8502:8502"  # Web UI
-      - "5055:5055"  # REST API
+      - "5055:5055"  # REST API (memory proxy + source store + credentials)
     environment:
-      # REQUIRED: Change this to your own secret string
-      # This encrypts your API keys in the database
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=change-me-to-a-secret-string
+      # REQUIRED: Fernet-safe secret for encrypting stored credentials.
+      # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      - OPEN_NOTEBOOK_ENCRYPTION_KEY=${OPEN_NOTEBOOK_ENCRYPTION_KEY:?set this in .env}
 
-      # Database connection (default values - no need to change)
+      # Memory Hub URL — point to the EverCore gateway on port 1995.
+      # Leave as localhost if Memory Hub runs on the host; override for remote.
+      - MEMORY_HUB_URL=${MEMORY_HUB_URL:-http://host.docker.internal:1995}
+      - MEMORY_HUB_USER_ID=${MEMORY_HUB_USER_ID:-mymemo_user}
+
+      # SurrealDB connection (stores memory snapshots as Source records)
       - SURREAL_URL=ws://surrealdb:8000/rpc
-      - SURREAL_USER=root
-      - SURREAL_PASSWORD=root
-      - SURREAL_NAMESPACE=open_notebook
-      - SURREAL_DATABASE=open_notebook
+      - SURREAL_USER=${SURREAL_USER:-root}
+      - SURREAL_PASSWORD=${SURREAL_PASSWORD:-root}
+      - SURREAL_NAMESPACE=mymemo
+      - SURREAL_DATABASE=mymemo
     volumes:
-      - ./notebook_data:/app/data
+      - ./mymemo_data:/app/data
     depends_on:
       - surrealdb
     restart: always

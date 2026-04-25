@@ -1,8 +1,7 @@
 """
-Utils package for Open Notebook.
+Utils package for MyMemo.
 
-To avoid circular imports, import functions directly:
-- from open_notebook.utils.context_builder import ContextBuilder
+Import functions directly to avoid circular imports:
 - from open_notebook.utils import token_count, compare_versions
 - from open_notebook.utils.chunking import chunk_text, detect_content_type, ContentType
 - from open_notebook.utils.embedding import generate_embedding, generate_embeddings

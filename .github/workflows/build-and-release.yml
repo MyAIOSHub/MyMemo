@@ -16,8 +16,8 @@ permissions:
   packages: write
 
 env:
-  GHCR_IMAGE: ghcr.io/lfnovo/open-notebook
-  DOCKERHUB_IMAGE: lfnovo/open_notebook
+  GHCR_IMAGE: ghcr.io/myaioshub/mymemo
+  DOCKERHUB_IMAGE: myaioshub/mymemo
 
 jobs:
   extract-version:
@@ -57,39 +57,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Free up disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force
-          df -h
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Setup buildx + registry login
+        uses: ./.github/actions/setup-buildx-login
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Login to Docker Hub
-        if: needs.extract-version.outputs.has_dockerhub_secrets == 'true'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-regular-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-regular-
+          cache-key-prefix: regular
+          has-dockerhub-secrets: ${{ needs.extract-version.outputs.has_dockerhub_secrets }}
+          dockerhub-username: ${{ secrets.DOCKER_USERNAME }}
+          dockerhub-password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Prepare Docker tags for regular build
         id: tags-regular
@@ -133,107 +107,16 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.tags-regular.outputs.tags }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          cache-from: type=local,src=/tmp/.buildx-cache-regular
+          cache-to: type=local,dest=/tmp/.buildx-cache-regular-new,mode=max
 
       - name: Move cache
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-  build-single:
-    needs: extract-version
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Free up disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force
-          df -h
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Login to Docker Hub
-        if: needs.extract-version.outputs.has_dockerhub_secrets == 'true'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache-single
-          key: ${{ runner.os }}-buildx-single-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-single-
-
-      - name: Prepare Docker tags for single build
-        id: tags-single
-        env:
-          ENV_GHCR_IMAGE: ${{ env.GHCR_IMAGE }}
-          GITHUB_EVENT_INPUTS_PUSH_LATEST: ${{ github.event.inputs.push_latest }}
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
-          GITHUB_EVENT_RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
-          ENV_DOCKERHUB_IMAGE: ${{ env.DOCKERHUB_IMAGE }}
-        run: |
-          TAGS=""$ENV_GHCR_IMAGE":${{ needs.extract-version.outputs.version }}-single"
-
-          # Determine if we should push latest tags
-          PUSH_LATEST=""$GITHUB_EVENT_INPUTS_PUSH_LATEST""
-          if [[ -z "$PUSH_LATEST" ]]; then
-            PUSH_LATEST="false"
-          fi
-
-          # Add GHCR latest tag if requested or for non-prerelease releases
-          if [[ "$PUSH_LATEST" == "true" ]] || [[ ""$GITHUB_EVENT_NAME"" == "release" && ""$GITHUB_EVENT_RELEASE_PRERELEASE"" != "true" ]]; then
-            TAGS="${TAGS},"$ENV_GHCR_IMAGE":v1-latest-single"
-          fi
-
-          # Add Docker Hub tags if credentials available
-          if [[ "${{ needs.extract-version.outputs.has_dockerhub_secrets }}" == "true" ]]; then
-            TAGS="${TAGS},"$ENV_DOCKERHUB_IMAGE":${{ needs.extract-version.outputs.version }}-single"
-
-            if [[ "$PUSH_LATEST" == "true" ]] || [[ ""$GITHUB_EVENT_NAME"" == "release" && ""$GITHUB_EVENT_RELEASE_PRERELEASE"" != "true" ]]; then
-              TAGS="${TAGS},"$ENV_DOCKERHUB_IMAGE":v1-latest-single"
-            fi
-          fi
-
-          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
-          echo "Generated tags: ${TAGS}"
-
-      - name: Build and push single-container image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.single
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.tags-single.outputs.tags }}
-          cache-from: type=local,src=/tmp/.buildx-cache-single
-          cache-to: type=local,dest=/tmp/.buildx-cache-single-new,mode=max
-
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-cache-single
-          mv /tmp/.buildx-cache-single-new /tmp/.buildx-cache-single
+          rm -rf /tmp/.buildx-cache-regular
+          mv /tmp/.buildx-cache-regular-new /tmp/.buildx-cache-regular
 
   summary:
-    needs: [extract-version, build-regular, build-single]
+    needs: [extract-version, build-regular]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -273,23 +156,6 @@ jobs:
             echo "⏭️ **Regular:** Skipped" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Regular:** Failed" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [[ "${{ needs.build-single.result }}" == "success" ]]; then
-            echo "✅ **Single (GHCR):** \`"$ENV_GHCR_IMAGE":${{ needs.extract-version.outputs.version }}-single\`" >> $GITHUB_STEP_SUMMARY
-            if [[ ""$GITHUB_EVENT_INPUTS_PUSH_LATEST"" == "true" ]]; then
-              echo "✅ **Single v1-Latest (GHCR):** \`"$ENV_GHCR_IMAGE":v1-latest-single\`" >> $GITHUB_STEP_SUMMARY
-            fi
-            if [[ "${{ needs.extract-version.outputs.has_dockerhub_secrets }}" == "true" ]]; then
-              echo "✅ **Single (Docker Hub):** \`"$ENV_DOCKERHUB_IMAGE":${{ needs.extract-version.outputs.version }}-single\`" >> $GITHUB_STEP_SUMMARY
-              if [[ ""$GITHUB_EVENT_INPUTS_PUSH_LATEST"" == "true" ]]; then
-                echo "✅ **Single v1-Latest (Docker Hub):** \`"$ENV_DOCKERHUB_IMAGE":v1-latest-single\`" >> $GITHUB_STEP_SUMMARY
-              fi
-            fi
-          elif [[ "${{ needs.build-single.result }}" == "skipped" ]]; then
-            echo "⏭️ **Single:** Skipped" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Single:** Failed" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY

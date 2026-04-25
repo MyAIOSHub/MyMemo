@@ -182,13 +182,16 @@ class ObjectModel(BaseModel):
             )
 
     async def relate(
-        self, relationship: str, target_id: str, data: Optional[Dict] = {}
+        self, relationship: str, target_id: str, data: Optional[Dict] = None
     ) -> Any:
         if not relationship or not target_id or not self.id:
             raise InvalidInputError("Relationship and target ID must be provided")
         try:
             return await repo_relate(
-                source=self.id, relationship=relationship, target=target_id, data=data
+                source=self.id,
+                relationship=relationship,
+                target=target_id,
+                data=data or {},
             )
         except Exception as e:
             logger.error(f"Error creating relationship: {str(e)}")

@@ -28,15 +28,44 @@ from typing import Any
 
 import httpx
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 # ---------------------------------------------------------------------------
-# Config
+# Config — read at call-time, not at import. Storing secrets in module globals
+# (and patching them later via globals()[...]) was both fragile and exposed
+# LLM_API_KEY to anyone who imported this module.
 # ---------------------------------------------------------------------------
 
-MEMORY_HUB_URL = os.getenv("MEMORY_HUB_URL", "http://localhost:1995")
-MEMORY_HUB_USER_ID = os.getenv("MEMORY_HUB_USER_ID", "mymemo_user")
-LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-LLM_MODEL = os.getenv("LLM_MODEL", "qwen-long")
+
+def _hub_url() -> str:
+    return os.getenv("MEMORY_HUB_URL", "http://localhost:1995")
+
+
+def _hub_user_id() -> str:
+    return os.getenv("MEMORY_HUB_USER_ID", "mymemo_user")
+
+
+def _llm_api_key() -> str:
+    return os.getenv("LLM_API_KEY", "")
+
+
+def _llm_base_url() -> str:
+    return os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+
+
+def _llm_model() -> str:
+    return os.getenv("LLM_MODEL", "qwen-long")
+
+
+# Backwards-compat shims — old `from materializer import MEMORY_HUB_URL` etc.
+# now resolve via getattr but force callers to read the *current* env value.
+MEMORY_HUB_URL = _hub_url()
+MEMORY_HUB_USER_ID = _hub_user_id()
+LLM_BASE_URL = _llm_base_url()
+LLM_MODEL = _llm_model()
 MAX_TOKENS_PER_MD = 4000  # soft limit per .md file (chars, ~1000 tokens)
 RECENT_DAYS = 3
 
@@ -44,11 +73,35 @@ DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "memory-docs"
 
 
 # ---------------------------------------------------------------------------
+# Prompt-injection guard
+# ---------------------------------------------------------------------------
+
+
+def _sanitize_for_prompt(text: str, *, max_len: int = 200) -> str:
+    """Strip control chars + structural tokens before feeding to an LLM.
+
+    Memory subjects/summaries originate from untrusted inputs (Claude Code
+    transcripts, browser-attention captures) and could contain role-hijacking
+    sequences like ``\\nSYSTEM: ignore previous`` or JSON-breaking quotes that
+    let an attacker pivot the classifier output (and therefore filenames /
+    written content).
+    """
+    if not text:
+        return ""
+    out = text.replace("\r", " ").replace("\n", " ")
+    out = "".join(ch for ch in out if ch.isprintable())
+    # Drop characters that would let crafted memories close out the JSON shape.
+    for token in ("```", "\\u", '"role"', "system:", "SYSTEM:"):
+        out = out.replace(token, " ")
+    return out[:max_len]
+
+
+# ---------------------------------------------------------------------------
 # EverCore client helpers
 # ---------------------------------------------------------------------------
 
 def _hub_post(path: str, payload: dict, timeout: float = 30.0) -> dict:
-    with httpx.Client(base_url=MEMORY_HUB_URL, timeout=timeout) as c:
+    with httpx.Client(base_url=_hub_url(), timeout=timeout) as c:
         r = c.post(path, json=payload)
         r.raise_for_status()
         return r.json()
@@ -90,17 +143,18 @@ def fetch_profile(user_id: str) -> list[dict]:
 
 def _llm_call(system: str, user: str, max_tokens: int = 2000) -> str:
     """Call DashScope-compatible LLM and return assistant content."""
-    if not LLM_API_KEY:
+    api_key = _llm_api_key()
+    if not api_key:
         raise RuntimeError("LLM_API_KEY not set — cannot classify memories")
     with httpx.Client(timeout=60.0) as c:
         r = c.post(
-            f"{LLM_BASE_URL}/chat/completions",
+            f"{_llm_base_url()}/chat/completions",
             headers={
-                "Authorization": f"Bearer {LLM_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
             json={
-                "model": LLM_MODEL,
+                "model": _llm_model(),
                 "messages": [
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
@@ -121,11 +175,13 @@ def classify_episodes(episodes: list[dict]) -> dict[str, list[dict]]:
     if not episodes:
         return {}
 
-    # Build subject list for batch classification
+    # Build subject list for batch classification.
+    # Sanitize each subject before embedding into the LLM prompt — see
+    # `_sanitize_for_prompt` for the threat model.
     subjects = []
     for i, ep in enumerate(episodes):
-        subj = ep.get("subject") or ep.get("summary", "")[:100]
-        subjects.append(f"{i}: {subj}")
+        raw = ep.get("subject") or ep.get("summary", "")[:100]
+        subjects.append(f"{i}: {_sanitize_for_prompt(raw, max_len=120)}")
 
     subjects_text = "\n".join(subjects[:200])  # cap at 200 for prompt length
 
@@ -146,7 +202,9 @@ def classify_episodes(episodes: list[dict]) -> dict[str, list[dict]]:
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
         mapping = json.loads(raw)
     except Exception as e:
-        print(f"  LLM classification failed: {e}, falling back to group_name")
+        logger.warning(
+            "LLM classification failed: %s, falling back to group_name", e
+        )
         mapping = {}
 
     # Build buckets
@@ -193,14 +251,15 @@ def _build_source_index(episodes: list[dict]) -> str:
 
 def summarize_for_md(project: str, episodes: list[dict]) -> str:
     """Use LLM to generate a coherent .md summary for a project's episodes."""
-    # Build episode content
+    # Build episode content. Sanitize subject + summary so untrusted memory
+    # text can't smuggle role-hijacking sequences into the writer prompt.
     ep_texts = []
     for ep in episodes[:30]:  # cap to avoid prompt overflow
-        subject = ep.get("subject", "")
-        summary = ep.get("summary", "")
+        subject = _sanitize_for_prompt(ep.get("subject", ""), max_len=200)
+        summary = _sanitize_for_prompt(ep.get("summary", ""), max_len=300)
         ts = ep.get("timestamp", "")
         ep_id = ep.get("id", "")[:16]
-        ep_texts.append(f"[{ts}] (ep:{ep_id}) {subject}\n{summary[:300]}")
+        ep_texts.append(f"[{ts}] (ep:{ep_id}) {subject}\n{summary}")
 
     content = "\n---\n".join(ep_texts)
 
@@ -321,56 +380,66 @@ def generate_index(output_dir: Path) -> str:
 # ---------------------------------------------------------------------------
 
 def materialize(output_dir: Path, user_id: str | None = None) -> dict[str, Any]:
-    """Run full materialization: fetch → classify → write .md files."""
-    uid = user_id or MEMORY_HUB_USER_ID
+    """Run full materialization: fetch → classify → write .md files.
+
+    Logs progress via `logger.info` instead of `print` because this function
+    is also reachable from the MCP server, where stdout is the JSON-RPC wire
+    protocol. CLI users can configure the root logger to mirror logs to
+    stdout if desired.
+    """
+    uid = user_id or _hub_user_id()
     output_dir.mkdir(parents=True, exist_ok=True)
     stats: dict[str, Any] = {"files_written": 0, "episodes_processed": 0}
 
-    print(f"Fetching episodes from {MEMORY_HUB_URL} for user={uid}...")
+    logger.info("Fetching episodes from %s for user=%s...", _hub_url(), uid)
     episodes = fetch_all_episodes(uid)
     stats["episodes_processed"] = len(episodes)
-    print(f"  Got {len(episodes)} episodes")
+    logger.info("  Got %d episodes", len(episodes))
 
     profiles = fetch_profile(uid)
-    print(f"  Got {len(profiles)} profiles")
+    logger.info("  Got %d profiles", len(profiles))
 
     # 1. User preferences (from profiles)
     prefs_content = generate_user_preferences(profiles)
     (output_dir / "user-preferences.md").write_text(prefs_content, encoding="utf-8")
     stats["files_written"] += 1
-    print(f"  Wrote user-preferences.md")
+    logger.info("  Wrote user-preferences.md")
 
     # 2. Recent focus (from recent episodes)
     recent_content = generate_recent_focus(episodes)
     (output_dir / "recent-focus.md").write_text(recent_content, encoding="utf-8")
     stats["files_written"] += 1
-    print(f"  Wrote recent-focus.md")
+    logger.info("  Wrote recent-focus.md")
 
     # 3. Project files (LLM classification)
     if episodes:
-        print(f"  Classifying {len(episodes)} episodes by project...")
+        logger.info("  Classifying %d episodes by project...", len(episodes))
         buckets = classify_episodes(episodes)
         for project_key, eps in buckets.items():
             if not eps:
                 continue
             filename = f"{project_key}.md"
-            print(f"  Summarizing {project_key} ({len(eps)} episodes)...")
+            logger.info("  Summarizing %s (%d episodes)...", project_key, len(eps))
             content = summarize_for_md(project_key, eps)
             (output_dir / filename).write_text(content, encoding="utf-8")
             stats["files_written"] += 1
-            print(f"  Wrote {filename}")
+            logger.info("  Wrote %s", filename)
 
     # 4. INDEX.md
     index_content = generate_index(output_dir)
     (output_dir / "INDEX.md").write_text(index_content, encoding="utf-8")
-    print(f"  Wrote INDEX.md")
+    logger.info("  Wrote INDEX.md")
 
     # 5. Write timestamp marker for freshness check
     (output_dir / ".last_materialized").write_text(
         datetime.now(timezone.utc).isoformat(), encoding="utf-8"
     )
 
-    print(f"\nDone: {stats['files_written']} files, {stats['episodes_processed']} episodes")
+    logger.info(
+        "Done: %d files, %d episodes",
+        stats["files_written"],
+        stats["episodes_processed"],
+    )
     return stats
 
 
@@ -388,22 +457,31 @@ def is_fresh(output_dir: Path, max_age_minutes: int = 30) -> bool:
 
 
 if __name__ == "__main__":
+    # CLI mode: surface progress to stdout so users see what's happening.
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
     parser = argparse.ArgumentParser(description="Materialize EverCore memories to .md files")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="Output directory")
     parser.add_argument("--user-id", type=str, default=None, help="EverCore user ID")
     args = parser.parse_args()
 
-    # Load env from memory-hub.env if present
-    env_file = Path(__file__).resolve().parent.parent / "memory-hub.env"
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
-        # Re-read after loading
-        globals()["LLM_API_KEY"] = os.getenv("LLM_API_KEY", "")
-        globals()["LLM_BASE_URL"] = os.getenv("LLM_BASE_URL", LLM_BASE_URL)
-        globals()["LLM_MODEL"] = os.getenv("LLM_MODEL", LLM_MODEL)
+    # Reuse the shared env-file loader. After this, every call-site reads via
+    # `_llm_api_key()` etc., so module globals don't need patching.
+    try:
+        from agent._shared import load_hub_env
+    except ImportError:
+        # If memory-hub-mcp is run without the agent package on PYTHONPATH,
+        # fall back to inline parsing.
+        def load_hub_env(env_file: Path | None = None) -> None:
+            env_file = env_file or Path(__file__).resolve().parent.parent / "memory-hub.env"
+            if not env_file.exists():
+                return
+            for raw in env_file.read_text().splitlines():
+                line = raw.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip())
+
+    load_hub_env()
 
     materialize(args.output, args.user_id)

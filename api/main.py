@@ -1,4 +1,7 @@
 # Load environment variables
+import os
+from typing import Optional
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,26 +27,13 @@ from open_notebook.exceptions import (
 )
 from api.routers import (
     auth,
-    chat,
     config,
-    context,
     credentials,
-    embedding,
     embedding_rebuild,
-    episode_profiles,
-    insights,
-    languages,
     memories,
     models,
-    notebooks,
-    notes,
-    podcasts,
-    search,
     settings,
-    source_chat,
     sources,
-    speaker_profiles,
-    transformations,
 )
 from api.routers import commands as commands_router
 from open_notebook.database.async_migrate import AsyncMigrationManager
@@ -67,12 +57,15 @@ async def lifespan(app: FastAPI):
     # Startup: Security checks
     logger.info("Starting API initialization...")
 
-    # Security check: Encryption key
-    if not get_secret_from_env("OPEN_NOTEBOOK_ENCRYPTION_KEY"):
+    # Security check: Encryption key (MYMEMO_ENCRYPTION_KEY with legacy fallback).
+    if not (
+        get_secret_from_env("MYMEMO_ENCRYPTION_KEY")
+        or get_secret_from_env("OPEN_NOTEBOOK_ENCRYPTION_KEY")
+    ):
         logger.warning(
-            "OPEN_NOTEBOOK_ENCRYPTION_KEY not set. "
-            "API key encryption will fail until this is configured. "
-            "Set OPEN_NOTEBOOK_ENCRYPTION_KEY to any secret string."
+            "Neither MYMEMO_ENCRYPTION_KEY nor OPEN_NOTEBOOK_ENCRYPTION_KEY is set. "
+            "API key encryption will fail until one is configured. "
+            "Set MYMEMO_ENCRYPTION_KEY to any secret string."
         )
 
     # Run database migrations
@@ -121,71 +114,99 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Open Notebook API",
-    description="API for Open Notebook - Research Assistant",
+    title="MyMemo API",
+    description="REST API for MyMemo — memory + agent infrastructure",
     lifespan=lifespan,
 )
 
-# Add password authentication middleware first
-# Exclude /api/auth/status and /api/config from authentication
+
+def _allowed_origins() -> list[str]:
+    """Configured CORS origins. Supports `MYMEMO_CORS_ORIGINS=foo,bar`.
+
+    Default: localhost dev origins (http://localhost:3000 / 127.0.0.1).
+    Set `MYMEMO_CORS_ORIGINS=*` only if explicitly intended (NOT recommended
+    with credentials).
+    """
+    raw = os.environ.get("MYMEMO_CORS_ORIGINS", "").strip()
+    if not raw:
+        return [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:5055",
+            "http://127.0.0.1:5055",
+        ]
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+_CORS_ORIGINS = _allowed_origins()
+_CORS_WILDCARD = _CORS_ORIGINS == ["*"]
+
+
+def _is_debug_mode() -> bool:
+    return os.environ.get("MYMEMO_DEBUG", "").lower() in ("1", "true", "yes")
+
+
+# Password auth middleware. /docs and /openapi.json are gated unless MYMEMO_DEBUG is set.
+_excluded = ["/", "/health", "/api/auth/status", "/api/config"]
+if _is_debug_mode():
+    _excluded.extend(["/docs", "/openapi.json", "/redoc"])
+
 app.add_middleware(
     PasswordAuthMiddleware,
-    excluded_paths=[
-        "/",
-        "/health",
-        "/docs",
-        "/openapi.json",
-        "/redoc",
-        "/api/auth/status",
-        "/api/config",
-    ],
+    excluded_paths=_excluded,
 )
 
-# Add CORS middleware last (so it processes first)
+# CORS — explicit allowlist by default. `allow_credentials=True` is incompatible
+# with `allow_origins=['*']` per the spec; we keep credentials but require an
+# explicit origin set unless the operator opted into wildcard.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
-    allow_credentials=True,
+    allow_origins=_CORS_ORIGINS,
+    allow_credentials=not _CORS_WILDCARD,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# Custom exception handler to ensure CORS headers are included in error responses
-# This helps when errors occur before the CORS middleware can process them
+def _safe_origin(request: Request) -> Optional[str]:
+    origin = request.headers.get("origin")
+    if not origin:
+        return None
+    if _CORS_WILDCARD:
+        return "*"
+    return origin if origin in _CORS_ORIGINS else None
+
+
 @app.exception_handler(StarletteHTTPException)
 async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
-    """
-    Custom exception handler that ensures CORS headers are included in error responses.
-    This is particularly important for 413 (Payload Too Large) errors during file uploads.
-
-    Note: If a reverse proxy (nginx, traefik) returns 413 before the request reaches
-    FastAPI, this handler won't be called. In that case, configure your reverse proxy
-    to add CORS headers to error responses.
-    """
-    # Get the origin from the request
-    origin = request.headers.get("origin", "*")
-
+    """Ensure CORS headers on error responses, but only for allowed origins."""
+    origin = _safe_origin(request)
+    headers = dict(exc.headers or {})
+    if origin:
+        headers["Access-Control-Allow-Origin"] = origin
+        if not _CORS_WILDCARD:
+            headers["Access-Control-Allow-Credentials"] = "true"
+        headers["Access-Control-Allow-Methods"] = "*"
+        headers["Access-Control-Allow-Headers"] = "*"
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
-        headers={
-            **(exc.headers or {}), "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Allow-Methods": "*",
-            "Access-Control-Allow-Headers": "*",
-        },
+        headers=headers,
     )
 
 
 def _cors_headers(request: Request) -> dict[str, str]:
-    origin = request.headers.get("origin", "*")
-    return {
+    origin = _safe_origin(request)
+    if not origin:
+        return {}
+    headers = {
         "Access-Control-Allow-Origin": origin,
-        "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Methods": "*",
         "Access-Control-Allow-Headers": "*",
     }
+    if not _CORS_WILDCARD:
+        headers["Access-Control-Allow-Credentials"] = "true"
+    return headers
 
 
 @app.exception_handler(NotFoundError)
@@ -263,33 +284,20 @@ async def open_notebook_error_handler(request: Request, exc: OpenNotebookError):
 # Include routers
 app.include_router(auth.router, prefix="/api", tags=["auth"])
 app.include_router(config.router, prefix="/api", tags=["config"])
-app.include_router(notebooks.router, prefix="/api", tags=["notebooks"])
-app.include_router(search.router, prefix="/api", tags=["search"])
 app.include_router(models.router, prefix="/api", tags=["models"])
-app.include_router(transformations.router, prefix="/api", tags=["transformations"])
-app.include_router(notes.router, prefix="/api", tags=["notes"])
-app.include_router(embedding.router, prefix="/api", tags=["embedding"])
 app.include_router(
     embedding_rebuild.router, prefix="/api/embeddings", tags=["embeddings"]
 )
 app.include_router(settings.router, prefix="/api", tags=["settings"])
-app.include_router(context.router, prefix="/api", tags=["context"])
 app.include_router(sources.router, prefix="/api", tags=["sources"])
-app.include_router(insights.router, prefix="/api", tags=["insights"])
 app.include_router(commands_router.router, prefix="/api", tags=["commands"])
-app.include_router(podcasts.router, prefix="/api", tags=["podcasts"])
-app.include_router(episode_profiles.router, prefix="/api", tags=["episode-profiles"])
-app.include_router(speaker_profiles.router, prefix="/api", tags=["speaker-profiles"])
-app.include_router(chat.router, prefix="/api", tags=["chat"])
-app.include_router(source_chat.router, prefix="/api", tags=["source-chat"])
 app.include_router(credentials.router, prefix="/api", tags=["credentials"])
-app.include_router(languages.router, prefix="/api", tags=["languages"])
 app.include_router(memories.router, prefix="/api", tags=["memories"])
 
 
 @app.get("/")
 async def root():
-    return {"message": "Open Notebook API is running"}
+    return {"message": "MyMemo API is running"}
 
 
 @app.get("/health")

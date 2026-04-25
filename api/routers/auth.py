@@ -1,24 +1,20 @@
-"""
-Authentication router for Open Notebook API.
-Provides endpoints to check authentication status.
-"""
+"""Authentication router. Reports whether the API is password-protected."""
 
 from fastapi import APIRouter
 
-from open_notebook.utils.encryption import get_secret_from_env
+from api.auth import _get_api_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/status")
 async def get_auth_status():
-    """
-    Check if authentication is enabled.
-    Returns whether a password is required to access the API.
-    Supports Docker secrets via OPEN_NOTEBOOK_PASSWORD_FILE.
-    """
-    auth_enabled = bool(get_secret_from_env("OPEN_NOTEBOOK_PASSWORD"))
+    """Check if authentication is enabled.
 
+    Reports `MYMEMO_PASSWORD` (or legacy `OPEN_NOTEBOOK_PASSWORD`) presence.
+    Both `_FILE` variants are honored.
+    """
+    auth_enabled = bool(_get_api_password())
     return {
         "auth_enabled": auth_enabled,
         "message": "Authentication is required"

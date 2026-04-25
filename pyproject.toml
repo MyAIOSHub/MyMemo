@@ -1,9 +1,9 @@
 [project]
-name = "open-notebook"
-version = "1.8.1"
-description = "An open source implementation of a research assistant, inspired by Google Notebook LM"
+name = "mymemo"
+version = "2.0.0"
+description = "Self-hosted memory + agent infrastructure for AI coding tools"
 authors = [
-    {name = "Luis Novo", email = "lfnovo@gmail.com"}
+    {name = "MyAIOSHub"}
 ]
 readme = "README.md"
 classifiers = [
@@ -18,29 +18,17 @@ dependencies = [
     "pydantic>=2.9.2",
     "loguru>=0.7.2",
     "langchain>=1.2.0",
-    "langgraph>=1.0.5",
+    "langchain-text-splitters>=0.3.0",
     "tiktoken>=0.12.0",
-    "langgraph-checkpoint-sqlite>=3.0.1",
-    "langchain-community>=0.4.1",
-    "langchain-openai>=1.1.6",
-    "langchain-anthropic>=1.3.0",
-    "langchain-ollama>=1.0.1",
-    "langchain-google-genai>=4.1.2",
-    "langchain-groq>=1.1.1",
-    "langchain_mistralai>=1.1.1",
-    "langchain_deepseek>=1.0.0",
     "tomli>=2.0.2",
     "python-dotenv>=1.0.1",
     "httpx[socks]>=0.27.0",
-    "content-core>=1.14.1,<2",
-    "ai-prompter>=0.3,<1",
     "esperanto>=2.19.7,<3",
     "surrealdb>=1.0.4",
-    "podcast-creator>=0.12.0,<1",
     "surreal-commands>=1.3.1,<2",
     "numpy>=2.4.1",
-    "pycountry>=26.2.16",
-    "babel>=2.18.0",
+    "cryptography>=42.0.0",
+    "packaging>=24.0",
 ]
 
 [tool.setuptools]
@@ -80,21 +68,10 @@ line-length = 88
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = [
-    "E501",  # line too long
-    "E402",  # module level import not at top of file (Streamlit requires this pattern)
-    "E722",  # do not use bare except (legacy code pattern)
-    "F401",  # imported but unused (may be used in type hints or re-exports)
-    "F541",  # f-string without placeholders
-    "F841",  # local variable assigned but never used
+    "E501",
+    "E402",
+    "E722",
+    "F401",
+    "F541",
+    "F841",
 ]
-
-[tool.ruff.lint.per-file-ignores]
-# Streamlit files need nest_asyncio.apply() before imports
-"app_home.py" = ["E402"]
-"pages/**/*.py" = ["E402"]
-
-[tool.mypy]
-# Exclude Streamlit UI pages from type checking
-[[tool.mypy.overrides]]
-module = "pages.*"
-ignore_errors = true

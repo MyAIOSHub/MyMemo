@@ -1,233 +1,162 @@
-# Open Notebook - Root CLAUDE.md
+# MyMemo — Root CLAUDE.md
 
-This file provides architectural guidance for contributors working on Open Notebook at the project level.
+Architectural guidance for contributors.
 
 ## Project Overview
 
-**Open Notebook** is an open-source, privacy-focused alternative to Google's Notebook LM. It's an AI-powered research assistant enabling users to upload multi-modal content (PDFs, audio, video, web pages), generate intelligent notes, search semantically, chat with AI models, and produce professional podcasts—all with complete control over data and choice of AI providers.
+**MyMemo** = self-hosted memory + agent infrastructure for AI coding tools. Collects context (browser attention, Claude Code sessions, manual input), processes via LLM into searchable episodic memories, serves unified HTTP API for any agent.
 
-**Key Values**: Privacy-first, multi-provider AI support, fully self-hosted option, open-source transparency.
+Originated as a fork of lfnovo/open-notebook. The Open Notebook web surface (notebooks, chat, podcasts, transformations, notes) has been ripped out. What remains: memory ingestion + agent system + MCP server + materializer.
 
----
-
-## Three-Tier Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│              Frontend (React/Next.js)                    │
-│              frontend/ @ port 3000                       │
-├─────────────────────────────────────────────────────────┤
-│ - Notebooks, sources, notes, chat, podcasts, search UI  │
-│ - Zustand state management, TanStack Query (React Query)│
-│ - Shadcn/ui component library with Tailwind CSS         │
-└────────────────────────┬────────────────────────────────┘
-                         │ HTTP REST
-┌────────────────────────▼────────────────────────────────┐
-│              API (FastAPI)                              │
-│              api/ @ port 5055                           │
-│              + /memories/* proxy endpoints               │
-├─────────────────────────────────────────────────────────┤
-│ - REST endpoints for notebooks, sources, notes, chat    │
-│ - LangGraph workflow orchestration                      │
-│ - Job queue for async operations (podcasts)             │
-│ - Multi-provider AI provisioning via Esperanto          │
-│ - Memory Hub proxy for EverMemOS integration            │
-└──────────┬─────────────────────────┬────────────────────┘
-           │ SurrealQL               │ HTTP REST
-┌──────────▼──────────────┐  ┌──────▼──────────────────────┐
-│   Database (SurrealDB)  │  │  Memory Hub (Optional)       │
-│   Graph DB @ port 8000  │  │  EverMemOS @ port 1995       │
-├─────────────────────────┤  ├──────────────────────────────┤
-│ - Notebook, Source,     │  │ - EverMemOS memory storage   │
-│   Note, ChatSession,   │  │ - MyAttention attention data  │
-│   Credential records    │  │ - CCHistory context history   │
-│ - Graph relationships   │  │ - Browse/search/import       │
-│ - Vector embeddings     │  │   memories as Sources        │
-└─────────────────────────┘  └──────────────────────────────┘
-```
+**Key values**: Privacy-first, local-only by default, agent-native, multi-provider AI.
 
 ---
 
-## Useful sources
+## Architecture
 
-User documentation is at @docs/
+```
+┌────────────────────────────────────────────────────────────┐
+│                    Agent Consumption Layer                  │
+│                                                             │
+│  Claude Code hooks   MCP server (stdio)   MemoDesktop       │
+│  Materializer .md    HTTP API clients     (external)        │
+└──────────────┬──────────────────────────────┬──────────────┘
+               │                              │
+               │ HTTP                         │ HTTP :5055
+               │                              │
+┌──────────────▼─────────┐     ┌─────────────▼──────────────┐
+│ Memory Hub gateway     │     │  MyMemo API (FastAPI)      │
+│ nginx @ :1995          │     │  api/ + open_notebook/     │
+├────────────────────────┤     ├────────────────────────────┤
+│ /api/v1/* → EverCore   │     │ /api/memories   (proxy)    │
+│ /local-store/* → MyAtt │     │ /api/sources    (snapshot) │
+│ /cc/* → cchistory      │     │ /api/credentials           │
+│                        │     │ /api/models /api/settings  │
+│ MongoDB + Milvus + ES  │     │ /api/embeddings/rebuild    │
+│ + Redis + DashScope    │     └──────────────┬─────────────┘
+└────────────┬───────────┘                    │ SurrealQL
+             │ vendored in EverMemOS/         │
+             │                   ┌────────────▼──────────────┐
+             │                   │ SurrealDB @ :8000         │
+             │                   │ Source (with memory_ref), │
+             └───── referenced ──┤ SourceEmbedding,          │
+                                 │ Credential                │
+                                 └───────────────────────────┘
+```
+
+**Three discrete stacks**:
+
+1. **Memory Hub** (`docker-compose.memory-hub.yml` + `EverMemOS/`): nginx + EverCore + MyAttention + cchistory + Mongo + Milvus + ES + Redis. Port 1995. **Do not touch** without understanding the EverCore vendored patches.
+
+2. **MyMemo API** (`api/` + `open_notebook/` + `commands/`): FastAPI on port 5055. Proxies memory ops to 1995, stores imported memories as local `Source` records (+ vector chunks) in SurrealDB.
+
+3. **Agent system** (`agent/` + `memory-hub-mcp/`): Claude Agent SDK based agent + skills, MCP server for external agents, materializer that turns episodic memories into topic `.md` files.
+
+---
 
 ## Tech Stack
 
-### Frontend (`frontend/`)
-- **Framework**: Next.js 16 (React 19)
-- **Language**: TypeScript
-- **State Management**: Zustand
-- **Data Fetching**: TanStack Query (React Query)
-- **Styling**: Tailwind CSS + Shadcn/ui
-- **Build Tool**: Webpack (via Next.js)
-- **i18n compatible**: All front-end changes must also consider the translation keys
-
-### API Backend (`api/` + `open_notebook/`)
-- **Framework**: FastAPI 0.104+
 - **Language**: Python 3.11+
-- **Workflows**: LangGraph state machines
-- **Database**: SurrealDB async driver
-- **AI Providers**: Esperanto library (8+ providers: OpenAI, Anthropic, Google, Groq, Ollama, Mistral, DeepSeek, xAI)
-- **Job Queue**: Surreal-Commands for async jobs (podcasts)
+- **API framework**: FastAPI 0.104+
+- **Database**: SurrealDB (graph DB + vectors; hosts Source + Credential snapshots only)
+- **AI providers**: Esperanto (8+ providers)
+- **Job queue**: Surreal-Commands (embed_source, rebuild_embeddings)
+- **Chunking**: langchain-text-splitters
 - **Logging**: Loguru
 - **Validation**: Pydantic v2
-- **Testing**: Pytest
 
-### Database
-- **SurrealDB**: Graph database with built-in embedding storage and vector search
-- **Schema Migrations**: Automatic on API startup via AsyncMigrationManager
-
-### Additional Services
-- **Content Processing**: content-core library (file/URL extraction)
-- **Prompts**: AI-Prompter with Jinja2 templating
-- **Podcast Generation**: podcast-creator library
-- **Embeddings**: Multi-provider via Esperanto
-- **Memory Hub** (optional): EverMemOS integration for importing personal memories as Sources. Comprises three sub-services: EverMemOS (memory storage), MyAttention (attention data), and CCHistory (context history). Connected via `MEMORY_HUB_URL` (default `http://localhost:1995`). When Memory Hub is not running, memory features are automatically hidden in the UI.
+Memory Hub stack runs separately (vendored EverMemOS + DashScope patches).
 
 ---
 
-## Architecture Highlights
+## Discrete Components
 
-### 1. Async-First Design
-- All database queries, graph invocations, and API calls are async (await)
-- SurrealDB async driver with connection pooling
-- FastAPI handles concurrent requests efficiently
-
-### 2. LangGraph Workflows
-- **source.py**: Content ingestion (extract → embed → save)
-- **chat.py**: Conversational agent with message history
-- **ask.py**: Search + synthesis (retrieve relevant sources → LLM)
-- **transformation.py**: Custom transformations on sources
-- All use `provision_langchain_model()` for smart model selection
-
-### 3. Multi-Provider AI
-- **Esperanto library**: Unified interface to 8+ AI providers
-- **Credential system**: Individual encrypted credential records per provider; models link to credentials for direct config
-- **ModelManager**: Factory pattern with fallback logic; uses credential config when available, env vars as fallback
-- **Smart selection**: Detects large contexts, prefers long-context models
-- **Override support**: Per-request model configuration
-
-### 4. Database Schema
-- **Automatic migrations**: AsyncMigrationManager runs on API startup
-- **SurrealDB graph model**: Records with relationships and embeddings
-- **Vector search**: Built-in semantic search across all content
-- **Transactions**: Repo functions handle ACID operations
-
-### 5. Authentication
-- **Current**: Simple password middleware (insecure, dev-only)
-- **Production**: Replace with OAuth/JWT (see CONFIGURATION.md)
+- **[api/CLAUDE.md](api/CLAUDE.md)**: FastAPI routers, services, memory proxy
+- **[open_notebook/CLAUDE.md](open_notebook/CLAUDE.md)**: Domain models (Source, Asset, MemoryRef), AI provisioning, database
+- **[open_notebook/domain/CLAUDE.md](open_notebook/domain/CLAUDE.md)**: Source + MemoryRef lifecycle
+- **[open_notebook/ai/CLAUDE.md](open_notebook/ai/CLAUDE.md)**: ModelManager, Esperanto
+- **[open_notebook/database/CLAUDE.md](open_notebook/database/CLAUDE.md)**: SurrealDB ops
+- **[commands/CLAUDE.md](commands/CLAUDE.md)**: Surreal-commands (embed_source, rebuild_embeddings)
+- **[agent/](agent/)**: Agent system, skills, meeting mode
+- **[memory-hub-mcp/README.md](memory-hub-mcp/README.md)**: MCP server + materializer
 
 ---
 
-## Important Quirks & Gotchas
+## Port Map
 
-### API Startup
-- **Migrations run automatically** on startup; check logs for errors
-- **Must start API before UI**: UI depends on API for all data
-- **SurrealDB must be running**: API fails without database connection
+| Port | Service | Owner |
+|------|---------|-------|
+| 1995 | Memory Hub nginx gateway | `docker-compose.memory-hub.yml` (separate stack) |
+| 5055 | MyMemo REST API | `api/main.py` |
+| 8000 | SurrealDB | `docker-compose.yml` |
 
-### Frontend-Backend Communication
-- **Base API URL**: Configured in `.env.local` (default: http://localhost:5055)
-- **CORS enabled**: Configured in `api/main.py` (allow all origins in dev)
-- **Rate limiting**: Not built-in; add at proxy layer for production
-
-### LangGraph Workflows
-- **Blocking operations**: Chat/podcast workflows may take minutes; no timeout
-- **State persistence**: Uses SQLite checkpoint storage in `/data/sqlite-db/`
-- **Model fallback**: If primary model fails, falls back to cheaper/smaller model
-
-### Podcast Generation
-- **Async job queue**: `podcast_service.py` submits jobs but doesn't wait
-- **Track status**: Use `/commands/{command_id}` endpoint to poll status
-- **TTS failures**: Fall back to silent audio if speech synthesis fails
-
-### Content Processing
-- **File extraction**: Uses content-core library; supports 50+ file types
-- **URL handling**: Extracts text + metadata from web pages
-- **Large files**: Content processing is sync; may block API briefly
+Port 1995 must stay reachable for the API proxy + MCP server + materializer. Changes to the MyMemo API must not break it.
 
 ---
 
-## Component References
+## Removed (legacy Open Notebook)
 
-See dedicated CLAUDE.md files for detailed guidance:
+These features were in the upstream fork. Removed in the memory-only pivot:
 
-- **[frontend/CLAUDE.md](frontend/CLAUDE.md)**: React/Next.js architecture, state management, API integration
-- **[api/CLAUDE.md](api/CLAUDE.md)**: FastAPI structure, service pattern, endpoint development
-- **[open_notebook/CLAUDE.md](open_notebook/CLAUDE.md)**: Backend core, domain models, LangGraph workflows, AI provisioning
-- **[open_notebook/domain/CLAUDE.md](open_notebook/domain/CLAUDE.md)**: Data models, repository pattern, search functions
-- **[open_notebook/ai/CLAUDE.md](open_notebook/ai/CLAUDE.md)**: ModelManager, AI provider integration, Esperanto usage
-- **[open_notebook/graphs/CLAUDE.md](open_notebook/graphs/CLAUDE.md)**: LangGraph workflow design, state machines
-- **[open_notebook/database/CLAUDE.md](open_notebook/database/CLAUDE.md)**: SurrealDB operations, migrations, async patterns
-- **Memory Hub integration**: `api/routers/memories.py` (proxy endpoints), `api/memory_service.py` (EverMemOS HTTP client), `api/memory_import_service.py` (memory-to-Source import with dedup and vectorization)
+- Notebook / Note / ChatSession domain models
+- Chat, ask, transformation, source_chat, insight LangGraph workflows
+- Podcast generation (podcast-creator library)
+- File upload / URL ingest routers
+- Web frontend (Next.js) + desktop shell (Electron)
+- Streamlit legacy pages
 
----
-
-## Documentation Map
-
-- **[README.md](README.md)**: Project overview, features, quick start
-- **[docs/index.md](docs/index.md)**: Complete user & deployment documentation
-- **[CONFIGURATION.md](CONFIGURATION.md)**: Environment variables, model configuration
-- **[CONTRIBUTING.md](CONTRIBUTING.md)**: Contribution guidelines
-- **[MAINTAINER_GUIDE.md](MAINTAINER_GUIDE.md)**: Release & maintenance procedures
-
----
-
-## Testing Strategy
-
-- **Unit tests**: `tests/test_domain.py`, `test_models_api.py`
-- **Graph tests**: `tests/test_graphs.py` (workflow integration)
-- **Utils tests**: `tests/test_utils.py`, `tests/test_chunking.py`, `tests/test_embedding.py`
-- **Run all**: `uv run pytest tests/`
-- **Coverage**: Check with `pytest --cov`
+Memory imports still create `Source` records, but as **memory snapshots with `memory_ref` provenance**, not manually-uploaded research content.
 
 ---
 
 ## Common Tasks
 
-### Add a New API Endpoint
-1. Create router in `api/routers/feature.py`
-2. Create service in `api/feature_service.py`
-3. Define schemas in `api/models.py`
-4. Register router in `api/main.py`
-5. Test via http://localhost:5055/docs
+### Run locally
 
-### Add a New LangGraph Workflow
-1. Create `open_notebook/graphs/workflow_name.py`
-2. Define StateDict and node functions
-3. Build graph with `.add_node()` / `.add_edge()`
-4. Invoke in service: `graph.ainvoke({"input": ...}, config={"..."})`
-5. Test with sample data in `tests/`
+```bash
+# 1. Memory Hub (separate terminal)
+docker compose -f docker-compose.memory-hub.yml --env-file memory-hub.env up
 
-### Add Database Migration
-1. Create `migrations/XXX_description.surql`
-2. Write SurrealQL schema changes
-3. Create `migrations/XXX_description_down.surql` (optional rollback)
-4. API auto-detects on startup; migration runs if newer than recorded version
+# 2. SurrealDB + API + worker
+make start-all
+```
 
-### Import Memories as Sources
-1. Ensure Memory Hub is running at the URL specified by `MEMORY_HUB_URL` (default `http://localhost:1995`)
-2. Check connectivity via `GET /memories/status` endpoint
-3. Browse available memories via `GET /memories/browse` (supports filtering by memory_type, group, date range)
-4. Search memories semantically via `POST /memories/search`
-5. Import selected memories into a notebook via `POST /memories/import` with notebook_id and memory IDs
-6. Imported memories become standard Sources with `memory_ref` metadata linking back to EverMemOS
-7. Once imported, memories participate in chat, search, transformation, and podcast workflows like any other Source
+### Import memories into the local Source store
 
-### Deploy to Production
-1. Review [CONFIGURATION.md](CONFIGURATION.md) for security settings
-2. Use `make docker-release` for multi-platform image
-3. Push to Docker Hub / GitHub Container Registry
-4. Deploy `docker compose --profile multi up`
-5. Verify migrations via API logs
+```bash
+curl -X POST http://localhost:5055/api/memories/import \
+  -H 'Content-Type: application/json' \
+  -d '{"memory_ids":["ep_123"],"memory_type":"episodic_memory","notebook_id":"default"}'
+```
+
+The `notebook_id` field is retained for legacy compatibility but is treated as an opaque grouping string — Notebook records no longer exist in the schema.
+
+### Add a new API endpoint
+
+1. Router in `api/routers/feature.py`
+2. Register in `api/main.py`
+3. Hit http://localhost:5055/docs
+
+### Add a DB migration
+
+1. `open_notebook/database/migrations/XXX_description.surql`
+2. Optional `XXX_description_down.surql`
+3. Auto-runs on API startup
 
 ---
 
-## Support & Community
+## Quirks & Gotchas
 
-- **Documentation**: https://open-notebook.ai
-- **Discord**: https://discord.gg/37XJPXfz2w
-- **Issues**: https://github.com/lfnovo/open-notebook/issues
-- **License**: MIT (see LICENSE)
+- **Migrations auto-run** on API startup via `AsyncMigrationManager`.
+- **Memory Hub can be offline** — API degrades gracefully. `/memories/status` returns `connected: false`.
+- **`TENANT_SINGLE_TENANT_ID=t_mymemo`** on the Memory Hub side; all records namespaced under that tenant in Mongo/Milvus/ES.
+- **Source.vectorize() is fire-and-forget** — returns command_id immediately; `/commands/{id}` endpoint polls status.
+- **DashScope is patched** into EverMemOS locally (`EverMemOS/src/agentic_layer/vectorize_dashscope.py` + `rerank_dashscope.py`). Upstream sync must re-apply.
+- **No web UI** — all consumption is via HTTP, MCP, or agent. External clients like MemoDesktop connect to port 1995 directly.
 
+---
+
+## Support
+
+- **Issues**: https://github.com/MyAIOSHub/MyMemo/issues
+- **License**: MIT
