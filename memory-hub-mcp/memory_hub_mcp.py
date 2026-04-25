@@ -201,12 +201,35 @@ def refresh_memory_docs(output_dir: str | None = None) -> str:
     Call this to refresh the local .md cache when memories have changed.
 
     Args:
-        output_dir: Override output directory (default: ../memory-docs/).
+        output_dir: Override output directory. Must resolve INSIDE the
+            allowlist (default `../memory-docs/`, or any path under
+            `$MYMEMO_MATERIALIZE_ROOT` when that env var is set). Absolute
+            traversal outside the allowlist is rejected.
     """
+    import os
     from pathlib import Path
     from materializer import materialize, DEFAULT_OUTPUT
 
-    target = Path(output_dir) if output_dir else DEFAULT_OUTPUT
+    if output_dir is None:
+        target = DEFAULT_OUTPUT
+    else:
+        # Path-traversal guard: resolve, then assert the result is within
+        # the allowlist. Default allowlist is the parent directory of
+        # DEFAULT_OUTPUT (so siblings like project-foo.md can be written).
+        allow_root_str = os.environ.get(
+            "MYMEMO_MATERIALIZE_ROOT", str(DEFAULT_OUTPUT.parent)
+        )
+        allow_root = Path(allow_root_str).resolve()
+        candidate = Path(output_dir).expanduser().resolve()
+        try:
+            candidate.relative_to(allow_root)
+        except ValueError:
+            return (
+                f"output_dir {candidate} is outside allowed root {allow_root}; "
+                "set MYMEMO_MATERIALIZE_ROOT to widen the allowlist."
+            )
+        target = candidate
+
     try:
         stats = materialize(target)
         return (

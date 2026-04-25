@@ -43,18 +43,12 @@ PROJECT_ROOT = AGENT_DIR.parent
 MEMORY_DOCS_DIR = PROJECT_ROOT / "memory-docs"
 
 
-def load_env():
-    """Load memory-hub.env if present and map keys for Claude Agent SDK."""
-    env_file = PROJECT_ROOT / "memory-hub.env"
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
+from agent._shared import EverCoreClient, emit, load_hub_env
 
-    # Map LLM_API_KEY → ANTHROPIC_API_KEY if not already set
-    # (memory-hub.env uses LLM_API_KEY, Claude Agent SDK needs ANTHROPIC_API_KEY)
+
+def load_env():
+    """Load memory-hub.env + map LLM_API_KEY → ANTHROPIC_API_KEY."""
+    load_hub_env(PROJECT_ROOT / "memory-hub.env")
     if not os.environ.get("ANTHROPIC_API_KEY") and os.environ.get("LLM_API_KEY"):
         os.environ["ANTHROPIC_API_KEY"] = os.environ["LLM_API_KEY"]
 
@@ -73,11 +67,8 @@ def get_config() -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# NDJSON output
+# NDJSON output: imported from _shared.emit
 # ---------------------------------------------------------------------------
-
-def emit(event: dict[str, Any]) -> None:
-    print(json.dumps(event, ensure_ascii=False), flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -126,18 +117,13 @@ def load_memory_doc(filename: str) -> str | None:
 
 def search_memories_http(query: str, cfg: dict[str, str]) -> list[dict[str, Any]]:
     """Direct HTTP search to EverCore (for when materialized docs aren't enough)."""
-    import httpx
     try:
-        with httpx.Client(base_url=cfg["memory_hub_url"], timeout=10.0) as c:
-            r = c.post("/api/v1/memories/search", json={
-                "query": query,
-                "method": "hybrid",
-                "memory_types": ["episodic_memory"],
-                "top_k": 5,
-                "filters": {"user_id": cfg["memory_hub_user_id"]},
-            })
-            r.raise_for_status()
-            return r.json().get("data", {}).get("episodes", [])
+        client = EverCoreClient(
+            base_url=cfg["memory_hub_url"],
+            user_id=cfg["memory_hub_user_id"],
+            timeout=10.0,
+        )
+        return client.search(query, top_k=5).get("data", {}).get("episodes", [])
     except Exception:
         return []
 

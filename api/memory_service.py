@@ -2,11 +2,21 @@
 
 import asyncio
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 import httpx
 from loguru import logger
 
 from open_notebook.config import MEMORY_HUB_URL, MEMORY_HUB_USER_ID
+
+
+def _safe_host(url: str) -> str:
+    """Return the hostname only, dropping scheme + path + creds."""
+    try:
+        parsed = urlparse(url)
+        return parsed.hostname or "memory-hub"
+    except Exception:
+        return "memory-hub"
 
 
 class MemoryService:
@@ -56,7 +66,12 @@ class MemoryService:
                 "url": self.base_url,
             }
         except Exception as e:
-            logger.warning(f"Memory Hub not reachable at {self.base_url}: {e}")
+            # Log host only — full URL may carry creds or internal topology.
+            logger.warning(
+                "Memory Hub not reachable at host {host}: {err}",
+                host=_safe_host(self.base_url),
+                err=e,
+            )
             return {
                 "connected": False,
                 "error": str(e),

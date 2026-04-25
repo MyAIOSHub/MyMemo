@@ -1,6 +1,6 @@
 """Service for importing EverMemOS memories as Open Notebook Sources."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List, Set
 
 from loguru import logger
 
@@ -9,21 +9,31 @@ from open_notebook.database.repository import ensure_record_id, repo_query
 from open_notebook.domain.notebook import Asset, MemoryRef, Source
 
 
-async def _find_existing_source_by_memory_id(memory_id: str) -> bool:
-    """Check if a memory has already been imported as a Source (dedup)."""
+async def _existing_memory_ids(memory_ids: Iterable[str]) -> Set[str]:
+    """Bulk dedup check — single SurrealDB round-trip per import batch.
+
+    Returns the subset of `memory_ids` that already exist as Sources via
+    `asset.memory_ref.memory_id`. Empty set on query failure (treat all as new
+    rather than blocking the import).
+    """
+    ids = list(memory_ids)
+    if not ids:
+        return set()
     try:
         results = await repo_query(
             """
-            SELECT id FROM source
-            WHERE asset.memory_ref.memory_id = $memory_id
-            LIMIT 1
+            SELECT asset.memory_ref.memory_id AS mid FROM source
+            WHERE asset.memory_ref.memory_id IN $ids
             """,
-            {"memory_id": memory_id},
+            {"ids": ids},
         )
-        return bool(results)
+        return {r["mid"] for r in (results or []) if r.get("mid")}
     except Exception as e:
-        logger.warning(f"Dedup check failed for memory {memory_id}, treating as new: {e}")
-        return False
+        logger.warning(
+            f"Bulk dedup check failed for {len(ids)} memories, "
+            f"treating all as new: {e}"
+        )
+        return set()
 
 
 async def import_memories_as_sources(
@@ -83,7 +93,10 @@ async def import_memories_as_sources(
             sorted(missing)[:5],
         )
 
-    created_sources = []
+    created_sources: List[Dict[str, Any]] = []
+
+    # Single bulk dedup query for the whole batch (was N+1 per memory).
+    already_imported = await _existing_memory_ids(memory_ids)
 
     for mem_id in memory_ids:
         mem = all_memories.get(mem_id)
@@ -95,8 +108,7 @@ async def import_memories_as_sources(
             })
             continue
 
-        # Dedup check: skip if already imported
-        if await _find_existing_source_by_memory_id(mem_id):
+        if mem_id in already_imported:
             logger.info(f"Memory {mem_id} already imported, skipping")
             created_sources.append({
                 "memory_id": mem_id,

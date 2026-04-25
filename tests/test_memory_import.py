@@ -63,7 +63,7 @@ class TestImportMemoriesNormal:
     """Tests for successful memory import."""
 
     @pytest.mark.asyncio
-    @patch("api.memory_import_service._find_existing_source_by_memory_id", new_callable=AsyncMock, return_value=False)
+    @patch("api.memory_import_service._existing_memory_ids", new_callable=AsyncMock, return_value=set())
     @patch("api.memory_import_service.repo_query", new_callable=AsyncMock)
     async def test_import_creates_source(self, mock_repo_query, mock_find_existing):
         """Normal import flow: Source is created and linked to notebook."""
@@ -99,7 +99,7 @@ class TestImportMemoriesNormal:
         mock_source_instance.relate.assert_awaited_once()
 
     @pytest.mark.asyncio
-    @patch("api.memory_import_service._find_existing_source_by_memory_id", new_callable=AsyncMock, return_value=False)
+    @patch("api.memory_import_service._existing_memory_ids", new_callable=AsyncMock, return_value=set())
     @patch("api.memory_import_service.repo_query", new_callable=AsyncMock)
     async def test_vectorize_failure_does_not_block(self, mock_repo_query, mock_find_existing):
         """Vectorize failure should not prevent source creation."""
@@ -147,9 +147,9 @@ class TestImportDeduplication:
         with (
             patch("api.memory_import_service.memory_service") as mock_mem_svc,
             patch(
-                "api.memory_import_service._find_existing_source_by_memory_id",
+                "api.memory_import_service._existing_memory_ids",
                 new_callable=AsyncMock,
-                return_value=True,
+                return_value={"mem-001"},
             ),
         ):
             mock_mem_svc.browse_memories = AsyncMock(return_value=_browse_result())

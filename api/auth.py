@@ -1,3 +1,5 @@
+import hmac
+import os
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Request
@@ -9,23 +11,41 @@ from starlette.responses import JSONResponse
 from open_notebook.utils.encryption import get_secret_from_env
 
 
+def _get_api_password() -> Optional[str]:
+    """Resolve the API password.
+
+    Priority: `MYMEMO_PASSWORD` → `OPEN_NOTEBOOK_PASSWORD` (deprecated).
+    Both `_FILE` variants are honored via `get_secret_from_env`. A deprecation
+    warning is logged the first time a request falls back to the legacy name.
+    """
+    new = get_secret_from_env("MYMEMO_PASSWORD")
+    if new:
+        return new
+    legacy = get_secret_from_env("OPEN_NOTEBOOK_PASSWORD")
+    if legacy:
+        logger.warning(
+            "OPEN_NOTEBOOK_PASSWORD is deprecated; switch to MYMEMO_PASSWORD."
+        )
+    return legacy
+
+
+def _is_debug_mode() -> bool:
+    """Whether to expose docs / openapi without auth."""
+    return os.environ.get("MYMEMO_DEBUG", "").lower() in ("1", "true", "yes")
+
+
 class PasswordAuthMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware to check password authentication for all API requests.
-    Always active with default password if OPEN_NOTEBOOK_PASSWORD is not set.
-    Supports Docker secrets via OPEN_NOTEBOOK_PASSWORD_FILE.
-    """
+    """Bearer-token middleware. Compares with `hmac.compare_digest`."""
 
     def __init__(self, app, excluded_paths: Optional[list] = None):
         super().__init__(app)
-        self.password = get_secret_from_env("OPEN_NOTEBOOK_PASSWORD")
-        self.excluded_paths = excluded_paths or [
-            "/",
-            "/health",
-            "/docs",
-            "/openapi.json",
-            "/redoc",
-        ]
+        self.password = _get_api_password()
+        # In debug mode `/docs` and friends are reachable without auth so the
+        # OpenAPI surface stays browseable. In production they require auth.
+        always_excluded = ["/", "/health"]
+        if _is_debug_mode():
+            always_excluded.extend(["/docs", "/openapi.json", "/redoc"])
+        self.excluded_paths = excluded_paths or always_excluded
 
     async def dispatch(self, request: Request, call_next):
         # Skip authentication if no password is set
@@ -62,8 +82,8 @@ class PasswordAuthMiddleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Check password
-        if credentials != self.password:
+        # Constant-time compare to prevent timing attacks
+        if not hmac.compare_digest(credentials, self.password):
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Invalid password"},
@@ -82,20 +102,12 @@ security = HTTPBearer(auto_error=False)
 def check_api_password(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> bool:
-    """
-    Utility function to check API password.
-    Can be used as a dependency in individual routes if needed.
-    Supports Docker secrets via OPEN_NOTEBOOK_PASSWORD_FILE.
-    Returns True without checking credentials if OPEN_NOTEBOOK_PASSWORD is not configured.
-    Raises 401 if credentials are missing or don't match the configured password.
-    """
-    password = get_secret_from_env("OPEN_NOTEBOOK_PASSWORD")
+    """Dependency form of the password check used by individual routes."""
+    password = _get_api_password()
 
-    # No password configured - skip authentication
     if not password:
         return True
 
-    # No credentials provided
     if not credentials:
         raise HTTPException(
             status_code=401,
@@ -103,8 +115,7 @@ def check_api_password(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Check password
-    if credentials.credentials != password:
+    if not hmac.compare_digest(credentials.credentials, password):
         raise HTTPException(
             status_code=401,
             detail="Invalid password",

@@ -21,6 +21,32 @@ from api.models import CredentialResponse
 from open_notebook.domain.credential import Credential
 from open_notebook.utils.encryption import get_secret_from_env
 
+
+def _allow_private_provider_urls() -> bool:
+    """Whether to permit private/loopback URLs as credential `base_url`.
+
+    Default: true (self-hosted deployments rely on it for Ollama/LM Studio/etc).
+    Set `MYMEMO_ALLOW_PRIVATE_PROVIDER_URLS=false` in cloud deployments where
+    the API can reach internal metadata services. Strict mode blocks RFC1918,
+    loopback, link-local, and unique-local addresses.
+    """
+    val = os.environ.get("MYMEMO_ALLOW_PRIVATE_PROVIDER_URLS", "true").strip().lower()
+    return val not in ("0", "false", "no", "off")
+
+
+def _get_encryption_key() -> Optional[str]:
+    """Resolve encryption key (`MYMEMO_ENCRYPTION_KEY` -> legacy fallback)."""
+    new = get_secret_from_env("MYMEMO_ENCRYPTION_KEY")
+    if new:
+        return new
+    legacy = get_secret_from_env("OPEN_NOTEBOOK_ENCRYPTION_KEY")
+    if legacy:
+        logger.warning(
+            "OPEN_NOTEBOOK_ENCRYPTION_KEY is deprecated; "
+            "switch to MYMEMO_ENCRYPTION_KEY."
+        )
+    return legacy
+
 # =============================================================================
 # Constants
 # =============================================================================
@@ -120,62 +146,65 @@ def validate_url(url: str, provider: str) -> None:
         if not hostname:
             raise ValueError("Invalid URL: hostname could not be determined.")
 
+        allow_private = _allow_private_provider_urls()
+
+        def _check_ip(ip):
+            # Always block link-local (cloud metadata, e.g. 169.254.169.254).
+            if ip.is_link_local:
+                raise ValueError(
+                    "Link-local addresses (169.254.x.x) are not allowed. "
+                    "These addresses are used for cloud metadata endpoints."
+                )
+            mapped = getattr(ip, "ipv4_mapped", None)
+            if mapped and mapped.is_link_local:
+                raise ValueError(
+                    "Link-local addresses (169.254.x.x) are not allowed. "
+                    "These addresses are used for cloud metadata endpoints."
+                )
+            if not allow_private:
+                if ip.is_loopback or ip.is_private:
+                    raise ValueError(
+                        "Private / loopback addresses are blocked because "
+                        "MYMEMO_ALLOW_PRIVATE_PROVIDER_URLS is disabled."
+                    )
+
         # Try to parse as IP address to check for dangerous addresses
         try:
             ip = ipaddress.ip_address(hostname)
-
-            # Block link-local addresses (169.254.x.x) - used for cloud metadata
-            # These are dangerous as they can expose cloud instance credentials
-            if ip.is_link_local:
-                raise ValueError(
-                    "Link-local addresses (169.254.x.x) are not allowed for security reasons. "
-                    "These addresses are used for cloud metadata endpoints."
-                )
-
-            # Block IPv4-mapped IPv6 addresses pointing to link-local
-            # e.g. ::ffff:169.254.169.254 bypasses IPv6 is_link_local check
-            if hasattr(ip, "ipv4_mapped") and ip.ipv4_mapped and ip.ipv4_mapped.is_link_local:
-                raise ValueError(
-                    "Link-local addresses (169.254.x.x) are not allowed for security reasons. "
-                    "These addresses are used for cloud metadata endpoints."
-                )
+            _check_ip(ip)
 
         except ValueError as ve:
-            # Re-raise our own ValueErrors
-            if "Link-local" in str(ve) or "Invalid URL" in str(ve):
+            msg = str(ve)
+            if (
+                "Link-local" in msg
+                or "Invalid URL" in msg
+                or "Private" in msg
+                or "Private / loopback" in msg
+            ):
                 raise
-            # Not an IP address, it's a hostname - need to resolve and check
+            # Not an IP — resolve hostname and check each address.
             try:
-                # Resolve hostname to IP address
                 resolved_ips = socket.getaddrinfo(hostname, None)
                 for family, _, _, _, sockaddr in resolved_ips:
                     ip_addr = sockaddr[0]
                     try:
                         parsed_ip = ipaddress.ip_address(ip_addr)
-                        if parsed_ip.is_link_local:
-                            raise ValueError(
-                                f"Hostname '{hostname}' resolves to a link-local address (169.254.x.x) which is not allowed for security reasons. "
-                                "These addresses are used for cloud metadata endpoints."
-                            )
-                        # Block IPv4-mapped IPv6 addresses pointing to link-local
+                        _check_ip(parsed_ip)
+                    except ValueError as inner_ve:
+                        msg = str(inner_ve)
                         if (
-                            hasattr(parsed_ip, "ipv4_mapped")
-                            and parsed_ip.ipv4_mapped
-                            and parsed_ip.ipv4_mapped.is_link_local
+                            "link-local" in msg.lower()
+                            or "Private" in msg
+                            or "Link-local" in msg
                         ):
                             raise ValueError(
-                                f"Hostname '{hostname}' resolves to a link-local address (169.254.x.x) which is not allowed for security reasons. "
-                                "These addresses are used for cloud metadata endpoints."
+                                f"Hostname '{hostname}' resolves to a blocked "
+                                f"address: {msg}"
                             )
-                    except ValueError as inner_ve:
-                        if "link-local" in str(inner_ve).lower() or "Link-local" in str(inner_ve):
-                            raise
                         # Skip non-IP addresses (e.g., IPv6 zones)
                         continue
             except socket.gaierror:
-                # Could not resolve hostname - allow it since the URL may be
-                # valid in the deployment environment (e.g., Azure endpoints,
-                # internal DNS names). We only block link-local addresses.
+                # Cannot resolve — allow; URL may be valid in target environment.
                 pass
 
     except ValueError:
@@ -191,10 +220,10 @@ def validate_url(url: str, provider: str) -> None:
 
 def require_encryption_key() -> None:
     """Raise ValueError if encryption key is not configured."""
-    if not get_secret_from_env("OPEN_NOTEBOOK_ENCRYPTION_KEY"):
+    if not _get_encryption_key():
         raise ValueError(
             "Encryption key not configured. "
-            "Set OPEN_NOTEBOOK_ENCRYPTION_KEY to enable storing API keys."
+            "Set MYMEMO_ENCRYPTION_KEY to enable storing API keys."
         )
 
 
@@ -316,7 +345,7 @@ async def get_provider_status() -> dict:
     Get configuration status: encryption key status, and per-provider
     configured/source information.
     """
-    encryption_configured = bool(get_secret_from_env("OPEN_NOTEBOOK_ENCRYPTION_KEY"))
+    encryption_configured = bool(_get_encryption_key())
 
     configured: Dict[str, bool] = {}
     source: Dict[str, str] = {}
@@ -326,7 +355,13 @@ async def get_provider_status() -> dict:
         try:
             db_credentials = await Credential.get_by_provider(provider)
             db_configured = len(db_credentials) > 0
-        except Exception:
+        except Exception as e:
+            logger.warning(
+                "DB credential check failed for {provider}: {err}; "
+                "treating as not configured.",
+                provider=provider,
+                err=e,
+            )
             db_configured = False
 
         configured[provider] = db_configured or env_configured

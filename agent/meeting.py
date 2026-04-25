@@ -44,14 +44,12 @@ MEMORY_DOCS_DIR = PROJECT_ROOT / "memory-docs"
 SKILLS_DIR = Path(__file__).resolve().parent / "skills" / "meeting"
 
 
+from agent._shared import EverCoreClient, emit as _shared_emit, load_hub_env
+
+
 def _load_env():
-    env_file = PROJECT_ROOT / "memory-hub.env"
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, v = line.split("=", 1)
-                os.environ.setdefault(k.strip(), v.strip())
+    """Thin wrapper kept for backward compatibility — delegates to load_hub_env."""
+    load_hub_env(PROJECT_ROOT / "memory-hub.env")
 
 
 def _get_llm_config() -> dict[str, str]:
@@ -456,15 +454,16 @@ class MeetingOrchestrator:
         if not messages:
             return False
 
-        # Chunk into 500-message batches
+        # Chunk into 500-message batches.
+        # NOTE: this method is sync. Callers must NOT invoke it from inside an
+        # async event loop — it would block the loop. The current caller
+        # (`run_meeting_command`) runs from the CLI dispatch which is
+        # synchronous, so this is safe.
+        client = EverCoreClient(base_url=hub["url"], user_id=hub["user_id"], timeout=90.0)
         for i in range(0, len(messages), 500):
             chunk = messages[i:i + 500]
             try:
-                with httpx.Client(base_url=hub["url"], timeout=90.0) as c:
-                    c.post("/api/v1/memories", json={
-                        "user_id": hub["user_id"],
-                        "messages": chunk,
-                    }).raise_for_status()
+                client.store(chunk)
             except Exception:
                 return False
         return True
@@ -474,9 +473,8 @@ class MeetingOrchestrator:
 # CLI entry (called from agent.py)
 # ---------------------------------------------------------------------------
 
-def emit(event: dict) -> None:
-    import json as _json
-    print(_json.dumps(event, ensure_ascii=False), flush=True)
+# `emit` is the shared NDJSON helper (was duplicated here previously).
+emit = _shared_emit
 
 
 def run_meeting_command(args) -> int:

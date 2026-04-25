@@ -60,28 +60,24 @@ def get_secret_from_env(var_name: str) -> Optional[str]:
 
 
 def _get_or_create_encryption_key() -> str:
+    """Resolve the encryption key.
+
+    Priority: `MYMEMO_ENCRYPTION_KEY` → `OPEN_NOTEBOOK_ENCRYPTION_KEY` (deprecated).
+    Both `_FILE` variants are honored via `get_secret_from_env`. Falling back
+    to the legacy name emits a one-time deprecation warning.
     """
-    Get encryption key from environment, requires explicit configuration.
-
-    Priority:
-    1. OPEN_NOTEBOOK_ENCRYPTION_KEY_FILE (Docker secrets)
-    2. OPEN_NOTEBOOK_ENCRYPTION_KEY (environment variable)
-
-    For production deployments, you MUST set OPEN_NOTEBOOK_ENCRYPTION_KEY explicitly!
-
-    Returns:
-        Encryption key string.
-
-    Raises:
-        ValueError: If no encryption key is configured.
-    """
-    # First check environment/Docker secrets
-    key = get_secret_from_env("OPEN_NOTEBOOK_ENCRYPTION_KEY")
-    if key:
-        return key
+    new = get_secret_from_env("MYMEMO_ENCRYPTION_KEY")
+    if new:
+        return new
+    legacy = get_secret_from_env("OPEN_NOTEBOOK_ENCRYPTION_KEY")
+    if legacy:
+        logger.warning(
+            "OPEN_NOTEBOOK_ENCRYPTION_KEY is deprecated; switch to MYMEMO_ENCRYPTION_KEY."
+        )
+        return legacy
 
     raise ValueError(
-        "OPEN_NOTEBOOK_ENCRYPTION_KEY is not set. "
+        "MYMEMO_ENCRYPTION_KEY is not set. "
         "Set this environment variable to any secret string to enable "
         "encrypted storage of API keys in the database."
     )
