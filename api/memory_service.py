@@ -7,7 +7,12 @@ from urllib.parse import urlparse
 import httpx
 from loguru import logger
 
-from open_notebook.config import MEMORY_HUB_URL, MEMORY_HUB_USER_ID
+from open_notebook.config import (
+    MEMORY_BLOCKED_ORIGINS,
+    MEMORY_HUB_URL,
+    MEMORY_HUB_USER_ID,
+)
+from open_notebook.utils.memory_origin import classify_origin
 
 
 def _safe_host(url: str) -> str:
@@ -240,15 +245,13 @@ class MemoryService:
             content = summary or mem.get("content", "") or episode
             title = subject or content[:100] or memory_type
 
-        # Derive source origin from group_name when available.
-        source_origin = "evermemo"
+        # Derive source origin from group_name + drop blocked origins.
+        # Both rules live in open_notebook.utils.memory_origin so the
+        # materializer (separate sub-package) can re-use the same logic.
         group_name = mem.get("group_name") or ""
-        if group_name:
-            gn = group_name.lower()
-            if "browser" in gn or "mymemo" in gn or "attention" in gn:
-                source_origin = "browser"
-            elif "claude" in gn or "cc" in gn:
-                source_origin = "claude_code"
+        source_origin = classify_origin(group_name)
+        if source_origin in MEMORY_BLOCKED_ORIGINS:
+            return None
 
         # Score is inlined in the item under v1 (not in a separate scores[] array).
         score = mem.get("score")

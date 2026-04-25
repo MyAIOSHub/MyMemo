@@ -24,7 +24,7 @@ class MemoryRef(BaseModel):
         "foresight",
     ] = "episodic_memory"
     user_id: Optional[str] = None
-    source_origin: Literal["browser", "claude_code", "evermemo"] = "evermemo"
+    source_origin: Literal["browser", "claude_code", "evermemo", "sayso"] = "evermemo"
     group_id: Optional[str] = None
     group_name: Optional[str] = None
     original_timestamp: Optional[str] = None

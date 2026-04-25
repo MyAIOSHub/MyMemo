@@ -60,6 +60,35 @@ def _llm_model() -> str:
     return os.getenv("LLM_MODEL", "qwen-long")
 
 
+# memory-hub-mcp ships as its own folder and isn't always on PYTHONPATH.
+# When the parent project is importable, reuse the canonical origin helper;
+# otherwise keep an in-file fallback that mirrors the same rules so the
+# script still works standalone.
+try:
+    from open_notebook.utils.memory_origin import (
+        blocked_origins_from_env as _blocked_origins,
+        classify_origin,
+    )
+
+    def _episode_origin(ep: dict) -> str:
+        return classify_origin(ep.get("group_name"))
+
+except ImportError:  # pragma: no cover — exercised only outside the project venv
+    def _blocked_origins() -> frozenset[str]:
+        raw = os.getenv("MEMORY_BLOCKED_ORIGINS", "browser,claude_code")
+        return frozenset(s.strip() for s in raw.split(",") if s.strip())
+
+    def _episode_origin(ep: dict) -> str:
+        gn = (ep.get("group_name") or "").lower()
+        if "browser" in gn or "mymemo" in gn or "attention" in gn:
+            return "browser"
+        if "claude" in gn or "cc" in gn:
+            return "claude_code"
+        if "sayso" in gn:
+            return "sayso"
+        return "evermemo"
+
+
 # Backwards-compat shims — old `from materializer import MEMORY_HUB_URL` etc.
 # now resolve via getattr but force callers to read the *current* env value.
 MEMORY_HUB_URL = _hub_url()
@@ -108,7 +137,13 @@ def _hub_post(path: str, payload: dict, timeout: float = 30.0) -> dict:
 
 
 def fetch_all_episodes(user_id: str, max_pages: int = 20) -> list[dict]:
-    """Fetch all episodic memories from EverCore, paginated."""
+    """Fetch all episodic memories from EverCore, paginated.
+
+    Filters out episodes whose derived origin is in MEMORY_BLOCKED_ORIGINS
+    (default: browser, claude_code) so the materialized .md output stays
+    focused on signal-rich sources.
+    """
+    blocked = _blocked_origins()
     all_eps: list[dict] = []
     for page in range(1, max_pages + 1):
         result = _hub_post("/api/v1/memories/get", {
@@ -120,7 +155,8 @@ def fetch_all_episodes(user_id: str, max_pages: int = 20) -> list[dict]:
             "filters": {"user_id": user_id},
         })
         episodes = result.get("data", {}).get("episodes", [])
-        all_eps.extend(episodes)
+        kept = [ep for ep in episodes if _episode_origin(ep) not in blocked]
+        all_eps.extend(kept)
         if len(episodes) < 100:
             break
     return all_eps
