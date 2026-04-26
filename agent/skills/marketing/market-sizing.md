@@ -1,6 +1,8 @@
 ---
-name: market-sizing
-description: Produce a rigorous, sourced TAM/SAM/SOM market sizing for any product or business. Use this skill whenever a user asks about market size, total addressable market, SAM, SOM, or market opportunity — across any industry including SaaS, AI tools, consumer brands, F&B, fashion, beauty, packaging, automotive, and more.
+name: "市场容量分析"
+name_en: "Market Sizing (TAM/SAM/SOM)"
+description: "当用户询问市场容量、TAM/SAM/SOM时使用此技能"
+description_en: "Use when user asks about market size, TAM/SAM/SOM, or market opportunity"
 version: v2
 ---
 

@@ -1,6 +1,8 @@
 ---
-name: chatroom-austrian
-description: |
+name: "奥派经济聊天室"
+name_en: "Austrian Chatroom"
+description: "|"
+description_en: "A chatroom for discussing Austrian economic ideas"
   哈耶克 × 米塞斯 × Claude 三人对话。奥派经济学视角的多角色讨论。
   触发方式：/chatroom-austrian、/奥派、「奥派聊天室」
   Austrian economics chatroom. Hayek × Mises × Claude debate.

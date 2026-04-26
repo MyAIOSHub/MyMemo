@@ -1,3 +1,10 @@
+---
+name: "无障碍清单"
+name_en: "Accessibility Checklist"
+description: "WCAG 2.1 AA 合规快速参考。可与 `frontend-ui-engineering` 技能配合使用。"
+description_en: "Quick reference for WCAG 2.1 AA compliance. Use alongside the `frontend-ui-engineering` skill."
+---
+
 # Accessibility Checklist
 
 Quick reference for WCAG 2.1 AA compliance. Use alongside the `frontend-ui-engineering` skill.

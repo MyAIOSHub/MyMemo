@@ -1,6 +1,8 @@
 ---
-name: save-game
-description: >
+name: "存档游戏"
+name_en: "Save Game"
+description: ">"
+description_en: "Save your current progress to continue later"
   项目存档（Save Game）。审视→反思→调整→写交接，不只是抄状态。
   适用于：工作段结束需要保存进展、compaction 即将发生、移交给其他 agent、需要设定未来检查点、或任何"下次回来时需要知道现在做到哪了"的场景。
   当用户表达类似意图时触发——不限于特定措辞。常见表达举例："存档"、"save game"、"写交接"、"记一下进度"、"今天先到这"、"我要去忙了"、"先放一放"、"把进展存下来"、"下次继续"、"记录一下当前状态"、"别忘了我们聊到哪了"。

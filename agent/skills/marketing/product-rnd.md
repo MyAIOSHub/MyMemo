@@ -1,6 +1,8 @@
 ---
-name: product-rnd
-description: End-to-end Product Innovation R&D workflow — inspiration gathering, research, and professional report generation. Use whenever the user wants to create a product innovation or R&D report, develop a new product concept, conduct NPD research, or generate a structured output for a product or investor audience. Also triggers on "product innovation", "new product development", "product concept", "packaging design brief", or any request to generate a report around a product idea.
+name: "产品创新研究"
+name_en: "Product Innovation Research"
+description: "当用户需要创建产品创新报告或开发新产品概念时使用此 skill"
+description_en: "Use when the user needs to create a product innovation report or develop a new product concept"
 metadata: {"clawdbot":{"emoji":"📊"}}
 ---
 

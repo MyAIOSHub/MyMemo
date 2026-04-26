@@ -1,6 +1,8 @@
 ---
-name: dispatching-parallel-agents
-description: Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies
+name: "并行代理调度"
+name_en: "Dispatching Parallel Agents"
+description: "当用户有多个独立任务时使用此 skill"
+description_en: "Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies"
 ---
 
 # Dispatching Parallel Agents

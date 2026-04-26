@@ -1,6 +1,8 @@
 ---
-name: memory-deposit
-description: >
+name: "记忆沉淀"
+name_en: "Memory Deposit"
+description: ">"
+description_en: "Store information in memory for later use"
   记忆系统搭建与健康检查（Memory Deposit）。检查并补齐 6 层记忆系统，确保 workspace 的记忆配置完整。缺什么补什么，已完成则报告状态。可反复执行。
   适用于：首次安装后初始化记忆系统、怀疑记忆功能不完整、想知道当前记忆系统的健康状态、或发现 agent 的记忆行为异常（忘事、不记录、记录格式混乱）。
   当用户表达类似意图时触发——不限于特定措辞。常见表达举例："检查记忆系统"、"memory deposit"、"记忆配置"、"记忆力怎么样"、"为什么老忘事"、"记忆系统健康吗"、"初始化记忆"、"补一下记忆配置"。

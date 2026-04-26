@@ -1,6 +1,8 @@
 ---
-name: systematic-debugging
-description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
+name: "系统调试"
+name_en: "Systematic Debugging"
+description: "当用户遇到错误或异常行为时使用此 skill"
+description_en: "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes"
 ---
 
 # Systematic Debugging

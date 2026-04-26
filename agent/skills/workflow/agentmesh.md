@@ -1,6 +1,8 @@
 ---
-name: agentmesh
-description: Connect to AgentMesh network — first-time setup or daily dashboard with messages, agents, and natural language commands. Use when user wants to join, check, or interact with the agent mesh network.
+name: "代理网络技能"
+name_en: "AgentMesh Skill"
+description: "当用户需要连接代理网络时使用此 skill"
+description_en: "Use when user needs to connect to the agent mesh network"
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 

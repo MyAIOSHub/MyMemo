@@ -1,6 +1,8 @@
 ---
-name: wechat-title-generator
-description: 公众号标题生成与评估技能。用于基于已确认的选题、大纲和目标读者，生成 8 个标题候选，筛掉低质标题，并推荐 1 个最值得发布的标题。适用于写作前或写作后定题阶段，不负责正文。
+name: "公众号标题生成"
+name_en: "Wechat Title Generator"
+description: "当用户需要生成公众号标题时使用此 skill"
+description_en: "Generates and evaluates WeChat article titles based on confirmed topics, outlines, and target audiences."
 ---
 
 # Wechat Title Generator

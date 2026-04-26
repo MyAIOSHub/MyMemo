@@ -1,6 +1,8 @@
 ---
-name: test-driven-development
-description: Use when implementing any feature or bugfix, before writing implementation code
+name: "测试驱动开发"
+name_en: "Test-Driven Development (TDD)"
+description: "当用户需要实现功能或修复错误时使用此 skill"
+description_en: "Use when implementing any feature or bugfix, before writing implementation code"
 ---
 
 # Test-Driven Development (TDD)

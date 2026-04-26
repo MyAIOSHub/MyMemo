@@ -1,6 +1,8 @@
 ---
-name: xiaohongshu-note-creator
-description: |
+name: "小红书笔记生成器"
+name_en: "Xiaohongshu Note Creator"
+description: "|"
+description_en: "Convert text content into visually appealing Xiaohongshu posts quickly"
   【笔记/文章转小红书】将用户已有的 WPS 笔记或文章内容，改写压缩为小红书图文方案。
   核心特征：用户已有原文内容（笔记、文章、推文、长文），需要转换格式发小红书。
   触发词："把笔记做成小红书""把这篇文章转小红书""把这篇推文发小红书""帮我生成小红书图文""把这篇笔记发小红书""笔记转小红书""小红书图文""生成小红书""这篇文章改成小红书""这个内容发小红书"。

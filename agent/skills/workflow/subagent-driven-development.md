@@ -1,6 +1,8 @@
 ---
-name: subagent-driven-development
-description: Use when executing implementation plans with independent tasks in the current session
+name: "子代理开发"
+name_en: "Subagent-Driven Development"
+description: "当用户在当前会话中执行独立任务的实施计划时使用此 skill"
+description_en: "Use when executing implementation plans with independent tasks in the current session"
 ---
 
 # Subagent-Driven Development

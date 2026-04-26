@@ -1,7 +1,9 @@
 ---
-name: misconception-finder
+name: "误解检测器"
+name_en: "Misconception Detector"
+description: "当用户检查学习笔记是否存在理解错误时使用此 skill。"
+description_en: "Use when checking study notes for understanding errors."
 author: Loki Mao (赛博小熊猫 Loki)
-description: 当用户希望检查一篇 WPS 学习笔记里是否存在理解错误、概念混淆、逻辑跳步或表述过虚时使用此 Skill。适合课后自查、复习前校正、讲给别人之前自检，以及“我是不是以为自己懂了其实没懂”的场景。
 ---
 
 # WPS Misconception Finder 2.0

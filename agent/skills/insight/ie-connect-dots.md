@@ -1,6 +1,8 @@
 ---
-name: ie-connect-dots
-description: 对笔记和想法进行语义聚类、发现想法之间的隐含连接、识别长期重复出现的主题模式。当用户提到"连接想法"、"发现关联"、"想法聚类"、"找到模式"、"这些笔记有什么联系"等需要理解多条笔记之间关系的场景时使用此技能。此技能属于灵感引擎（ie-）推理层，专门处理想法之间的关系分析，不涉及笔记检索或内容生成。
+name: "推理层：想法连接"
+name_en: "Reasoning Layer: Idea Linking"
+description: "当用户需要连接想法、发现关联或找到模式时使用此技能。"
+description_en: "Use when users need to connect ideas, find associations, or identify patterns."
 ---
 
 # 推理层：想法连接与模式发现

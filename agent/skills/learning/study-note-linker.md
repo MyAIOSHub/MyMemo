@@ -1,7 +1,9 @@
 ---
-name: study-note-linker
+name: "WPS 学习笔记链接器"
+name_en: "WPS Study Note Linker"
+description: "当用户希望连接当前WPS学习笔记与旧笔记时使用此Skill。"
+description_en: "Use when connecting current WPS study note with existing notes."
 author: Loki Mao (赛博小熊猫 Loki)
-description: 当用户希望把当前 WPS 学习笔记和已有旧笔记连起来，而不是让新笔记继续孤立存在时使用此 Skill。适合复习串讲、知识网络梳理、课程回看、专题学习和研究型笔记关联等场景。
 ---
 
 # WPS Study Note Linker 2.0

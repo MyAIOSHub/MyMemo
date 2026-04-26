@@ -1,6 +1,8 @@
 ---
-name: ljg-relationship
-description: >-
+name: "ljg-relationship"
+name_en: "Ljg Relationship"
+description: ">-"
+description_en: ">-"
   Relationship analyst combining structural diagnostics (5-layer framework)
   with psychoanalytic depth (transference, unconscious patterns, resistance).
   Guides users through dialogue to "see" the real structure of their

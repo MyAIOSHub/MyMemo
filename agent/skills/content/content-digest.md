@@ -1,6 +1,8 @@
 ---
-name: content-digest
-description: 将任意内容提炼为结构化知识笔记，自动保存到 WPS 笔记。只要用户给出任何内容（链接、图片、本地文件、粘贴文字）并有保存笔记的意图，就应使用此 skill。常见触发词：「总结」「提炼」「做笔记」「读书笔记」「学习笔记」「整理成笔记」「帮我看看」「帮我解读」「记一下」「存下来」「整理一下」「帮我归纳」。也适用于用户直接给出 URL、@图片、@文件但没有明确说「存笔记」的情况——只要内容值得保存，主动使用此 skill。支持网页、公众号、本地 PDF/Word/TXT/Markdown/图片/截图、粘贴文本；所有图片（本地截图、网络图片、PDF 图片页、笔记内图片）均可自动视觉解读；输出一句话概括、核心观点、金句摘录、我的思考；多篇合并为一篇笔记。不用于：代码重构、纯技术问答、文件编辑、仅讨论链接（无保存意图）、日常聊天。
+name: "内容摘要 — 万能内容提炼"
+name_en: "Content Digest"
+description: "当用户提供内容并有保存笔记意图时使用此 skill"
+description_en: "Use when user provides content with note-saving intention"
 allowed-tools: "Read WebFetch Bash(pip3:*) Bash(python3:*)"
 compatibility: 需要 wps-note MCP 服务器已连接；需要 Python 3 环境（用于图片类 PDF 转换，首次运行会自动安装 pymupdf）；需要支持读取本地文件和图片、WebFetch 工具抓取网页内容。
 metadata:

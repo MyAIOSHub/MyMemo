@@ -1,6 +1,8 @@
 ---
-name: spec-driven-development
-description: Creates specs before coding. Use when starting a new project, feature, or significant change and no specification exists yet. Use when requirements are unclear, ambiguous, or only exist as a vague idea.
+name: "规格驱动开发"
+name_en: "Spec-Driven Development"
+description: "当用户需要创建规格时使用此 skill"
+description_en: "Use when creating specifications."
 ---
 
 # Spec-Driven Development

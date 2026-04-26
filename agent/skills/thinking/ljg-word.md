@@ -1,6 +1,8 @@
 ---
-name: ljg-word
-description: Deep-dive English word mastery tool. Deconstructs a single English word into core semantics and epiphany. Use when user asks to explain/master a specific English word.
+name: "词源解析"
+name_en: "LJG-Word"
+description: "当用户需要解析特定英文单词时使用此 skill"
+description_en: "Use when user needs to analyze a specific English word."
 version: "1.0.1"
 user_invocable: true
 ---

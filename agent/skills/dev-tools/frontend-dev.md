@@ -1,6 +1,8 @@
 ---
-name: frontend-dev
-description: |
+name: "前端工作室"
+name_en: "Frontend Studio"
+description: "|"
+description_en: "A set of tools for building and debugging web front-end interfaces"
   Full-stack frontend development combining premium UI design, cinematic animations,
   AI-generated media assets, persuasive copywriting, and visual art. Builds complete,
   visually striking web pages with real media, advanced motion, and compelling copy.

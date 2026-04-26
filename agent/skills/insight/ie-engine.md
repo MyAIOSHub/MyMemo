@@ -1,6 +1,8 @@
 ---
-name: ie-engine
-description: 灵感引擎的统一入口，串联记忆检索、想法连接和洞见生成的完整流水线。当用户提到"灵感引擎"、"激发灵感"、"connect the dots"、"寻找灵感"、"帮我把想法串起来"、"从笔记中发现新东西"等需要完整运行灵感生成流水线的场景时使用此技能。此外，当用户正在深入探索某个主题、进行创造性思考、或讨论复杂问题时，如果你判断用户的历史笔记中可能存在相关启发，也应主动考虑触发此技能，以轻量提示的方式提醒用户历史笔记中可能有相关灵感。只有需要完整流水线时才触发此技能；如果用户只需要单一能力（如仅检索笔记或仅分析关系），请使用对应的分层技能：ie-retrieve-memory、ie-connect-dots 或 ie-generate-insight。
+name: "灵感引擎"
+name_en: "Inspiration Engine"
+description: "当用户提到\"灵感引擎\"或需要完整运行灵感生成流水线时使用此技能。"
+description_en: "Use when the user mentions 'Inspiration Engine' or needs the full inspiration generation pipeline."
 ---
 
 # 灵感引擎：编排与注意力管理

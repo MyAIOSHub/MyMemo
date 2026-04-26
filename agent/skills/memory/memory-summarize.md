@@ -1,3 +1,10 @@
+---
+name: "记忆摘要"
+name_en: "Memory Summary"
+description: "将当前对话的关键信息提炼为可存储的记忆。"
+description_en: "Extracts key information from the current conversation into storable memory."
+---
+
 # memory-summarize
 
 目标：将当前对话的关键信息提炼为可存储的记忆。

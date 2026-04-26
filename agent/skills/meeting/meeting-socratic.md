@@ -1,3 +1,9 @@
+---
+name: "苏格拉底诘问"
+name_en: "Socratic Probing"
+description: "暴露定义含混、未经验证的前提和关键反事实"
+description_en: "Expose vague definitions, unverified premises, and counterfactuals"
+---
 # meeting-socratic
 
 目标：暴露定义含混、未经验证的前提和关键反事实。

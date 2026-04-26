@@ -1,6 +1,8 @@
 ---
-name: load-game
-description: >
+name: "load-game"
+name_en: "Load Game"
+description: ">"
+description_en: ">"
   项目读档（Load Game）。从 HANDOFF.md 恢复项目上下文，对比计划与实际，识别偏差并调整。
   适用于：Compaction 后恢复项目状态、接手别人/子 agent 的项目、Cron 定时检查、跨天/跨周恢复工作、或任何"上次做到哪了"的场景。
   当用户表达类似意图时触发——不限于特定措辞。常见表达举例："读档"、"load game"、"恢复项目"、"review 进度"、"检查计划"、"上次聊到哪了"、"继续之前的项目"、"我们之前做到哪一步了"、"这个项目什么进度"、"把之前的上下文恢复一下"。

@@ -1,5 +1,8 @@
 ---
-description: Run the pre-launch checklist and prepare for production deployment
+name: "发布助手"
+name_en: "Ship"
+description: "当用户准备发布时使用此 skill"
+description_en: "Run the pre-launch checklist and prepare for production deployment"
 ---
 
 Invoke the agent-skills:shipping-and-launch skill.

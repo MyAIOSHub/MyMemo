@@ -1,3 +1,10 @@
+---
+name: "测试模式参考"
+name_en: "Testing Patterns Reference"
+description: "跨技术栈的常见测试模式速查。可与 `test-driven-development` 技能配合使用。"
+description_en: "Quick reference for common testing patterns across the stack. Use alongside the `test-driven-development` skill."
+---
+
 # Testing Patterns Reference
 
 Quick reference for common testing patterns across the stack. Use alongside the `test-driven-development` skill.

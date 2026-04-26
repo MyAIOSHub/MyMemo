@@ -1,3 +1,9 @@
+---
+name: "类比借鉴"
+name_en: "Cross-domain Analogies"
+description: "借相邻领域类比打开新的理解角度"
+description_en: "Borrow analogies from adjacent fields to open new perspectives"
+---
 # meeting-analogies
 
 目标：借相邻领域类比打开新的理解角度。

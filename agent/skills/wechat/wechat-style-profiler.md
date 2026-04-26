@@ -1,6 +1,8 @@
 ---
-name: wechat-style-profiler
-description: 面向公众号作者的文风 DNA 梳理技能。用于从 3-10 篇参考文章中建立可复用的风格画像，输出 14 维分析、标点符号偏好、分块习惯、段落配方、叙述方法体系、内容推进方式和默认 DNA 文件，并通过用户校准确保画像可直接给写稿技能调用。
+name: "微信风格分析"
+name_en: "WeChat Style Analyzer"
+description: "当用户需要梳理公众号文风时使用此 skill"
+description_en: "Use when users need to analyze public account writing style"
 ---
 
 # Wechat Style Profiler

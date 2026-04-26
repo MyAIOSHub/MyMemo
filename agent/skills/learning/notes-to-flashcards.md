@@ -1,7 +1,9 @@
 ---
-name: notes-to-flashcards
+name: "笔记转卡片"
+name_en: "Notes to Flashcards 2.0"
+description: "当用户需要将笔记转为复习卡片时使用此技能。"
+description_en: "Use when converting notes into review cards for active recall."
 author: Loki Mao (赛博小熊猫 Loki)
-description: 当用户希望把 WPS 笔记转成可主动回忆的复习卡片时使用此 Skill。适合课程笔记复习、概念记忆、考前冲刺、误解修正后的再巩固，以及把静态笔记变成可刷卡片的学习材料。
 ---
 
 # WPS Notes to Flashcards 2.0

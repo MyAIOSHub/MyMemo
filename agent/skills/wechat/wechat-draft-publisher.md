@@ -1,6 +1,8 @@
 ---
-name: wechat-draft-publisher
-description: 自动将 HTML 文章发布到微信公众号草稿箱，支持封面图上传、标题、作者和元数据管理。当用户说"推送到微信"、"发布到公众号草稿"、"上传到草稿箱"或提到微信文章发布时使用。
+name: "微信草稿发布器"
+name_en: "WeChat Draft Publisher"
+description: "当用户提到微信文章发布时使用此 skill。"
+description_en: "Use when the user mentions WeChat article publishing."
 ---
 
 # 微信公众号草稿发布器

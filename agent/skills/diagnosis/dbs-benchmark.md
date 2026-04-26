@@ -1,6 +1,8 @@
 ---
-name: dbs-benchmark
-description: |
+name: "数据库基准"
+name_en: "DB Benchmark"
+description: "|"
+description_en: "Tool for comparing the performance of different databases"
   dontbesilent 对标分析。用五重过滤法帮你找到值得模仿的对标，排除一切关于「我」的噪音。
   触发方式：/dbs-benchmark、/对标、「帮我找对标」「我该模仿谁」
   Benchmark analysis using dontbesilent's five-filter method.

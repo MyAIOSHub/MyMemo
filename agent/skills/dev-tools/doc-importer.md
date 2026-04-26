@@ -1,6 +1,8 @@
 ---
-name: doc-importer
-description: >
+name: "文档导入器"
+name_en: "Doc Importer"
+description: ">"
+description_en: "Imports and processes document content"
   将本地文档批量导入到 WPS 笔记。支持扫描 Obsidian Vault、思源笔记、微信公众号存档、
   下载目录或任意用户指定目录，自动识别 HTML、Markdown、PDF、DOCX、PPTX、XLSX 等格式，
   转换为 WPS 笔记可读内容并保留图片和富文本格式。

@@ -1,6 +1,8 @@
 ---
-name: news-to-note
-description: >
+name: "新闻智能解读"
+name_en: "News Insight"
+description: ">"
+description_en: "Intelligently understand every news article using your note knowledge base"
   基于 WPS 笔记知识库的新闻智能解读。将新闻存入笔记，搜索用户整个笔记库找到关联内容，
   产出个性化 insight 分析。也支持批量新闻收集写入简报。
   当用户说「找新闻」「热点汇总」「新闻简报」「帮我读这篇文章」「看看这个链接」

@@ -1,6 +1,8 @@
 ---
-name: react-native-dev
-description: |
+name: "React Native 开发指南"
+name_en: "React Native & Expo Development Guide"
+description: "|"
+description_en: "Guides development processes and best practices for React Native and Expo projects"
   React Native and Expo development guide covering components, styling, animations, navigation,
   state management, forms, networking, performance optimization, testing, native capabilities,
   and engineering (project structure, deployment, SDK upgrades, CI/CD).

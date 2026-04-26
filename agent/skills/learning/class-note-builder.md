@@ -1,7 +1,9 @@
 ---
-name: class-note-builder
+name: "课堂笔记助手"
+name_en: "Class Note Helper"
+description: "当用户需要整理课堂逐字稿、OCR笔记或零散内容为结构化笔记时使用。"
+description_en: "Use when users need to organize classroom transcripts, OCR notes, or scattered content into structured notes."
 author: Loki Mao (赛博小熊猫 Loki)
-description: 当用户希望把课堂逐字稿、OCR 笔记、截图资料或零散学习内容整理成结构化的 WPS 学习笔记时使用此 Skill。适合课堂记录整理、培训复盘、补课笔记汇总、课程主笔记构建等场景，尤其适合原始材料很乱、但最终需要一篇可复习、可回看、可继续补充的主笔记时。
 ---
 
 # WPS Class Note Builder 2.0

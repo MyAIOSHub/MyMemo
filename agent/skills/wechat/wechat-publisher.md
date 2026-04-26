@@ -1,6 +1,8 @@
 ---
-name: wechat-publisher
-description: |
+name: "微信发布助手"
+name_en: "WeChat Publisher"
+description: "|"
+description_en: "Publish content to WeChat official account in one click"
   【公众号发布助手】将 WPS 笔记排版并导出为微信公众号 HTML。
   当用户说"发公众号""排版公众号""导出到公众号""我要发布了""文章排版""发一下""排版这篇文章"时使用。
   这是创作流程的最后一步：内容已完成，需要排版发布到公众号。

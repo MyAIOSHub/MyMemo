@@ -1,6 +1,8 @@
 ---
-name: logo-design
-description: "Design professional logos as SVG code with browser preview. Use this skill when the user asks to design a logo, create a brand mark, make an icon, or build a visual identity. Also triggers on 'logo', 'brand mark', 'wordmark', 'monogram', 'icon design', 'visual identity', or 'design a logo for'. Outputs clean, scalable SVG files with full design rationale."
+name: "标志设计"
+name_en: "Logo Design Skill"
+description: "当用户需要设计logo时使用此skill，生成可缩放的SVG文件。"
+description_en: "Use when user needs logo design, generates scalable SVG files."
 metadata:
   version: 2.0.0
 ---

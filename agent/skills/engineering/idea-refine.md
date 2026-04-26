@@ -1,6 +1,8 @@
 ---
-name: idea-refine
-description: Refines ideas iteratively. Refine ideas through structured divergent and convergent thinking. Use "idea-refine" or "ideate" to trigger.
+name: "创意优化"
+name_en: "Idea Refine"
+description: "当用户需要优化创意时使用此 skill"
+description_en: "Refines ideas iteratively through structured divergent and convergent thinking. Use \\"idea-refine\\" or \\"ideate\\" to trigger."
 ---
 
 # Idea Refine

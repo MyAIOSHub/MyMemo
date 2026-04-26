@@ -1,6 +1,8 @@
 ---
-name: minimax-multimodal-toolkit
-description: >
+name: "多模态工具包"
+name_en: "Multi-Modal Toolkit"
+description: ">"
+description_en: "Comprehensive toolset for handling multiple data types"
   MiniMax multimodal model skill — use MiniMax Multi-Modal models for speech, music, video, and image.
   Create voice, music, video, and images with MiniMax AI: TTS (text-to-speech, voice cloning, voice design,
   multi-segment), music (songs, instrumentals), video (text-to-video, image-to-video, start-end frame,

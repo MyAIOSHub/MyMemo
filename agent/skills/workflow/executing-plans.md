@@ -1,6 +1,8 @@
 ---
-name: executing-plans
-description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
+name: "执行计划"
+name_en: "Executing Plans"
+description: "当用户有书面执行计划时使用此 skill"
+description_en: "Use when you have a written implementation plan to execute in a separate session with review checkpoints"
 ---
 
 # Executing Plans

@@ -1,6 +1,8 @@
 ---
-name: tag-organize
-description: 笔记标签整理的核心原则与完整工作流程。当用户提到"整理笔记标签"、"清理标签"、"标签太乱"、"标签太多"、"帮我打标签"、"重构标签"、"重新分类"、"笔记分类混乱"、"标签体系需要优化"等需求时使用。
+name: "标签整理指南"
+name_en: "Tag Organization Guide"
+description: "当用户需要整理笔记标签时使用。"
+description_en: "Use when users need to organize note tags."
 compatibility: 需要 WPS 笔记 MCP 服务连接
 metadata:
   author: wps

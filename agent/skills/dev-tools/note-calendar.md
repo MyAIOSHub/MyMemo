@@ -1,6 +1,8 @@
 ---
-name: note-calendar
-description: 在 macOS 上打通 WPS 笔记与系统日历。支持查询日程、创建/移动/删除日历事件，以及笔记与日历的双向联动：把今日日程整理成笔记规划页、从笔记中提取事项落入日历、根据明日事件推断今日前置准备、全局时间块规划、收集散落各处的待办 checkbox。仅支持 macOS。当用户说「帮我查日程」「看看我的日历」「今天有什么安排」「日程写到笔记」「把笔记里的计划加进日历」「明天要出发今天准备什么」「帮我规划今天」「整理我的 TODO」时使用。
+name: "笔记日历"
+name_en: "Note Calendar"
+description: "当用户查日程、整理安排或规划时间时使用。"
+description_en: "Connect WPS Notes with macOS calendar, support scheduling, event management, and bidirectional synchronization."
 compatibility: 仅支持 macOS。日历操作依赖 bin/ 目录下的 cal-* 脚本（通过 osascript 调用 macOS Calendar App，兼容 iCloud、Exchange 等所有日历源）。笔记操作优先使用 wpsnote-cli，不可用时降级到 user-wpsnote MCP 服务。
 metadata:
   author: Yicheng Xu

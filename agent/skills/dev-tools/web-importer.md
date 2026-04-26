@@ -1,6 +1,8 @@
 ---
-name: web-importer
-description: >
+name: "网页导入器"
+name_en: "Web Importer"
+description: ">"
+description_en: "Efficiently import web content into WPS Notes"
   将网页内容高质量导入到 WPS 笔记，保留原文颜色、粗体、标题格式，图片按原文位置插入。
   支持微信公众号文章、X/Twitter 推文/Thread 和任意通用网页，统一入口自动识别，加 --wps 参数直接写入 WPS 笔记。
   当用户说「把这个网页存到笔记」「导入这篇文章」「抓取这个页面到笔记」

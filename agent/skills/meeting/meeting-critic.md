@@ -1,3 +1,9 @@
+---
+name: "关键批评"
+name_en: "Sharp Critique"
+description: "打最脆弱的一点，而不是平均评论"
+description_en: "Strike the weakest point instead of giving balanced commentary"
+---
 # meeting-critic
 
 目标：打最脆弱的一点，而不是平均评论所有内容。

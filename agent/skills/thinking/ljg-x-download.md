@@ -1,6 +1,8 @@
 ---
-name: ljg-x-download
-description: "Download images and videos from X (Twitter) posts to ~/Downloads. Use when user shares an X/Twitter link and wants to save media, or says '下载', 'download', '保存图片', '保存视频', or provides a x.com/twitter.com URL with intent to download media."
+name: "X媒体下载"
+name_en: "X Media Downloader"
+description: "当用户分享X/Twitter链接或说‘下载’时使用此技能"
+description_en: "Use when user shares X/Twitter link or says 'download'"
 version: "1.1.0"
 user_invocable: true
 ---

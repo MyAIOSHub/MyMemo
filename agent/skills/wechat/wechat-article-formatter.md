@@ -1,6 +1,8 @@
 ---
-name: wechat-article-formatter
-description: 将Markdown文章转换为美化的HTML格式，适配微信公众号发布。应用专业CSS样式、代码高亮、优化排版。当用户说"美化这篇文章"、"转换为HTML"、"优化公众号格式"、"生成公众号HTML"时使用。
+name: "微信文章美化工具"
+name_en: "WeChat Article Formatter"
+description: "当用户说“美化这篇文章”时使用此 skill，转换Markdown为微信公众号HTML格式。"
+description_en: "Use when users say 'beautify this article,' convert Markdown to WeChat HTML format."
 allowed-tools: Read, Write, Bash
 ---
 

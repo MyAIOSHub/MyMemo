@@ -1,6 +1,8 @@
 ---
-name: content-creator
-description: |
+name: "内容创作者"
+name_en: "Content Creator"
+description: "|"
+description_en: "Efficient workflow for professional content creation"
   【内容创作起点】用户想要写文章/公众号/文案时的首选skill。
   触发词："帮我写""我想写""准备写""开始写""写个文章""写篇稿子""写公众号""写小红书""仿照这个风格写""分析我的写作风格""提取写作模板"。
   核心流程：风格画像→需求确认→大纲设计→深度研究→文章创作→定稿交付。

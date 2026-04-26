@@ -1,5 +1,8 @@
 ---
-description: Implement the next task incrementally — build, test, verify, commit
+name: "构建"
+name_en: "Build"
+description: "当用户需要逐步执行构建任务时使用此 skill"
+description_en: "Implement the next task incrementally — build, test, verify, commit"
 ---
 
 Invoke the agent-skills:incremental-implementation skill alongside agent-skills:test-driven-development.

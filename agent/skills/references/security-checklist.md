@@ -1,3 +1,10 @@
+---
+name: "安全清单"
+name_en: "Security Checklist"
+description: "网页应用安全的快速参考。配合 `security-and-hardening` 技能使用。"
+description_en: "Quick reference for web application security. Use alongside the `security-and-hardening` skill."
+---
+
 # Security Checklist
 
 Quick reference for web application security. Use alongside the `security-and-hardening` skill.

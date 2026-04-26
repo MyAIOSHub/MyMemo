@@ -1,6 +1,8 @@
 ---
-name: image-gen
-description: |
+name: "图像生成"
+name_en: "Image Gen"
+description: "|"
+description_en: "Generate AI images from text descriptions"
   AI 图像生成助手，支持文生图和图生图，对接 OpenRouter / 阿里云百炼 / 火山方舟 / Google Gemini。
   内置 API Key 加密管理：Key 以 AES 加密存入 WPS 笔记，解密密钥由「设备ID + 笔记ID + provider」现场派生，本机无需存储额外文件。
   触发词："帮我生图""文生图""图生图""用 AI 画一张""生成一张图""根据这张图生成""垫图生图""用 Flux 生图""用 Gemini 生图"。

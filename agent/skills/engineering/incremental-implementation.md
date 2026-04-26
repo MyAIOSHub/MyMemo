@@ -1,6 +1,8 @@
 ---
-name: incremental-implementation
-description: Delivers changes incrementally. Use when implementing any feature or change that touches more than one file. Use when you're about to write a large amount of code at once, or when a task feels too big to land in one step.
+name: "渐进实现"
+name_en: "Incremental Implementation"
+description: "当用户需要渐进实现多文件修改时使用此 skill"
+description_en: "Use when user needs to implement changes across multiple files incrementally"
 ---
 
 # Incremental Implementation

@@ -1,6 +1,8 @@
 ---
-name: api-and-interface-design
-description: Guides stable API and interface design. Use when designing APIs, module boundaries, or any public interface. Use when creating REST or GraphQL endpoints, defining type contracts between modules, or establishing boundaries between frontend and backend.
+name: "API与接口设计"
+name_en: "API and Interface Design"
+description: "当用户设计API、模块边界或公共接口时使用此技能"
+description_en: "Use when designing APIs, module boundaries, or public interfaces."
 ---
 
 # API and Interface Design

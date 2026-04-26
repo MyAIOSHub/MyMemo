@@ -1,6 +1,8 @@
 ---
-name: ljg-paper-flow
-description: "Paper workflow: read papers + cast cards in one go. Takes one or more arxiv links, paper URLs, PDFs, or paper names. For each paper, runs ljg-paper (generates org analysis) then ljg-card -l (generates long reading card PNG). Use when user says '论文流', 'paper flow', '读论文并做卡片', '论文卡片', or provides multiple papers wanting both analysis and cards."
+name: "论文流"
+name_en: "Paper Flow"
+description: "当用户说‘论文流’或提供多篇论文时使用此 skill，一键读论文并生成分析卡片。"
+description_en: "Read papers and generate cards in one go, supporting Arxiv links, paper URLs, PDFs, or paper names."
 user_invocable: true
 version: "1.0.1"
 ---

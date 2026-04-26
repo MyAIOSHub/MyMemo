@@ -1,6 +1,8 @@
 ---
-name: wechat-tech-writer
-description: 自动搜索、抓取、改写技术内容，生成适合微信公众号的中文科普文章。涵盖AI大模型、GitHub开源工具、技术话题。当用户说"写一篇关于XXX的文章"、"帮我研究XXX"、"生成公众号文章"时使用。
+name: "微信技术写作助手"
+name_en: "WeChat Tech Writer"
+description: "当用户说\"写一篇关于XXX的文章\"时使用此 skill。"
+description_en: "Use when the user says \"write an article about XXX.\""
 allowed-tools: WebSearch, WebFetch, Read, Write, Edit, Bash
 ---
 

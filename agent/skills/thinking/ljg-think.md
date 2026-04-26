@@ -1,6 +1,8 @@
 ---
-name: ljg-think
-description: 追本之箭——纵向深钻思维工具。给一个观点、现象或问题，像箭一样一路向下钻到不可再分的本质。Use when user says '想透', '追本', '本质是什么', '为什么会这样', '深挖', '钻到底', 'think deep', 'drill down', or wants to trace any idea/phenomenon vertically to its irreducible root. Also trigger when user provides a statement and wants depth analysis, not breadth survey.
+name: "追本之箭"
+name_en: "Root Arrow"
+description: "当用户想透、追本或问本质时使用此 skill"
+description_en: "Use when user wants to think deep, drill down, or find the essence."
 user_invocable: true
 ---
 

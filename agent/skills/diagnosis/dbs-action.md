@@ -1,6 +1,8 @@
 ---
-name: dbs-action
-description: |
+name: "Dbs行动力"
+name_en: "Dbs-Action"
+description: "|"
+description_en: "Tool to assess and improve personal execution ability"
   dontbesilent 执行力诊断。用阿德勒心理学框架诊断你「知道该做什么但就是不做」的真正原因。
   触发方式：/dbs-action、/action、「我知道该怎么做但就是不做」「为什么我总是拖延」
   Execution block diagnosis using Adlerian psychology framework.

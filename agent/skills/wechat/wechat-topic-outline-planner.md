@@ -1,6 +1,8 @@
 ---
-name: wechat-topic-outline-planner
-description: 公众号选题与大纲策划技能。用于把一个粗点子、资料包、语音底稿或采访纪要，转成 2-3 个高价值选题角度、1 个推荐方向、1 套主大纲和 1 套备选大纲。适用于写作前的方案阶段，必须先确认结构，再交给写稿技能。
+name: "公众号选题规划"
+name_en: "Wechat Topic Planner"
+description: "当用户有粗点子或资料包时使用此 skill，生成选题角度和大纲。"
+description_en: "Transforms rough ideas or materials into 2-3 high-value topic angles and supporting outlines, suitable for pre-writing planning stages."
 ---
 
 # Wechat Topic Outline Planner

@@ -1,5 +1,8 @@
 ---
-description: Start spec-driven development — write a structured specification before writing code
+name: "规格"
+name_en: "Spec"
+description: "当用户需要编写代码时使用此 skill 进行结构化规格设计"
+description_en: "Start spec-driven development — write a structured specification before writing code"
 ---
 
 Invoke the agent-skills:spec-driven-development skill.

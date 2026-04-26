@@ -1,6 +1,8 @@
 ---
-name: context-engineering
-description: Optimizes agent context setup. Use when starting a new session, when agent output quality degrades, when switching between tasks, or when you need to configure rules files and context for a project.
+name: "上下文工程"
+name_en: "Context Engineering"
+description: "当用户开始新会话时使用此 skill"
+description_en: "Use when starting a new session"
 ---
 
 # Context Engineering

@@ -1,3 +1,9 @@
+---
+name: "回顾复盘"
+name_en: "Retrospective"
+description: "抽取可以复用的经验与反模式"
+description_en: "Pull out reusable lessons and anti-patterns"
+---
 # meeting-retrospective
 
 目标：抽取可以复用的经验与反模式。

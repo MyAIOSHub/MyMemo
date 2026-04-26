@@ -1,6 +1,8 @@
 ---
-name: ljg-card
-description: "Content caster (铸). Transforms content into PNG visuals. Six molds: -l (default) long reading card, -i infograph, -m multi-card reading cards (1080x1440), -v visual sketchnote, -c comic (manga-style B&W), -w whiteboard (marker-style board layout). Output to ~/Downloads/. Use when user says '铸', 'cast', '做成图', '做成卡片', '做成信息图', '做成海报', '视觉笔记', 'sketchnote', '漫画', 'comic', 'manga', '白板', 'whiteboard'. Replaces ljg-cards and ljg-infograph."
+name: "铸图"
+name_en: "Cast Image"
+description: "当用户说'铸'、'做成图'时使用此 skill，生成 PNG 图像。"
+description_en: "Use when user says 'cast' or 'make into image', generates PNG visuals."
 user_invocable: true
 version: "1.7.0"
 ---

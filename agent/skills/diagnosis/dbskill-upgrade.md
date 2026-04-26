@@ -1,6 +1,8 @@
 ---
-name: dbskill-upgrade
-description: 升级 dbskill 到最新版本
+name: "数据库升级"
+name_en: "DB Upgrade"
+description: "升级 dbskill 到最新版本"
+description_en: "Upgrade dbskill to the latest version"
 trigger: /dbskill-upgrade、/升级dbskill、「升级 dbskill」
 ---
 

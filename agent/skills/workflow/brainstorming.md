@@ -1,6 +1,8 @@
 ---
-name: brainstorming
-description: "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
+name: "创意构思"
+name_en: "Brainstorming Ideas Into Designs"
+description: "当用户需要创意构思时使用此 skill"
+description_en: "Use when user needs brainstorming."
 ---
 
 # Brainstorming Ideas Into Designs

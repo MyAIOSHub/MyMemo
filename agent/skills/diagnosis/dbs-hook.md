@@ -1,6 +1,8 @@
 ---
-name: dbs-hook
-description: |
+name: "Dbs钩子"
+name_en: "Dbs Hook"
+description: "|"
+description_en: "Optimizes the opening of short videos for better engagement"
   dontbesilent 短视频开头优化。诊断开头问题 + 生成优化方案。
   触发方式：/dbs-hook、/hook、「帮我优化开头」「开头怎么写」
   Short video opening optimization with diagnosis and solutions.

@@ -1,7 +1,9 @@
 ---
-name: prerequisite-gap-finder
+name: "前置知识探测器"
+name_en: "Prerequisite Gap Finder"
+description: "当用户觉得主题难懂或卡住时使用此技能。"
+description_en: "Use when user finds a topic hard to understand or gets stuck."
 author: Loki Mao (赛博小熊猫 Loki)
-description: 当用户觉得一个主题看不懂、学得卡住，或者想知道自己到底缺了哪些前置基础时使用此 Skill。适合课程复习、自学卡点分析、考前查漏补缺、回看旧笔记时发现“明明记了但还是不会”的场景。
 ---
 
 # WPS Prerequisite Gap Finder 2.0

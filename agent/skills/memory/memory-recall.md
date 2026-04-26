@@ -1,3 +1,10 @@
+---
+name: "记忆检索"
+name_en: "Memory Recall"
+description: "从记忆库中查找与当前话题相关的历史信息。"
+description_en: "Retrieve historical knowledge related to the current topic from the memory library."
+---
+
 # memory-recall
 
 目标：从记忆库中检索与当前话题相关的历史知识。

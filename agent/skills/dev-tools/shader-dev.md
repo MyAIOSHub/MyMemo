@@ -1,6 +1,8 @@
 ---
-name: shader-dev
-description: Comprehensive GLSL shader techniques for creating stunning visual effects — ray marching, SDF modeling, fluid simulation, particle systems, procedural generation, lighting, post-processing, and more.
+name: "着色器工艺"
+name_en: "Shader Craft"
+description: "当用户需要创建视觉效果时使用此 skill。"
+description_en: "Use when users need to create visual effects."
 license: MIT
 metadata:
   version: "1.0"

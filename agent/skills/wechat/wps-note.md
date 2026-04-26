@@ -1,6 +1,8 @@
 ---
-name: wps-note
-description: 通过 MCP 工具读取、编辑和管理 WPS 笔记，基于 block 文档模型，所有内容以
+name: "WPS 笔记 MCP 技能"
+name_en: "WPS Note MCP Skill"
+description: "通过 MCP 工具读取、编辑和管理 WPS 笔记，基于 block 文档模型，所有内容以"
+description_en: "Read, edit, and manage WPS notes via the MCP tool, based on a block document model where all content is presented in blocks."
   XML 格式交换。当用户说"帮我看看笔记"、"搜索笔记"、"创建一篇笔记"、"编辑笔记内容"、
   "整理标签"，或提到 WPS 笔记、WPS Note、云笔记时使用。也适用于排查 MCP 工具调用错误
   （BLOCK_NOT_FOUND、EDITOR_NOT_READY 等）。

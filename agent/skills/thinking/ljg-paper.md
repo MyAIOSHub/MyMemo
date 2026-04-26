@@ -1,6 +1,8 @@
 ---
-name: ljg-paper
-description: "Paper reader for non-academics. Takes a paper and extracts its ideas for personal use. Focuses on understanding, not academic critique. Use when user shares an arxiv link, paper URL, PDF, or asks to analyze a research paper. Trigger words: '读论文', '分析论文', 'paper', or when user shares an academic paper."
+name: "读论文"
+name_en: "Paper Reader"
+description: "当用户分享论文链接或要求分析论文时使用此 skill"
+description_en: "Use when user shares paper link or asks to analyze paper"
 user_invocable: true
 version: "4.3.0"
 ---

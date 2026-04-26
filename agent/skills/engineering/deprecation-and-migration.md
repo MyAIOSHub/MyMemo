@@ -1,6 +1,8 @@
 ---
-name: deprecation-and-migration
-description: Manages deprecation and migration. Use when removing old systems, APIs, or features. Use when migrating users from one implementation to another. Use when deciding whether to maintain or sunset existing code.
+name: "弃用与迁移"
+name_en: "Deprecation and Migration"
+description: "当用户需要弃用旧系统时使用此 skill"
+description_en: "Use when users need to deprecate old systems"
 ---
 
 # Deprecation and Migration

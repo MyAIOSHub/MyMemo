@@ -1,3 +1,10 @@
+---
+name: "性能清单"
+name_en: "Performance Checklist"
+description: "网页应用性能的快速参考清单，可与 `performance-optimization` 技能配合使用。"
+description_en: "Quick reference checklist for web application performance. Use alongside the `performance-optimization` skill."
+---
+
 # Performance Checklist
 
 Quick reference checklist for web application performance. Use alongside the `performance-optimization` skill.

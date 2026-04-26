@@ -1,5 +1,8 @@
 ---
-description: Break work into small verifiable tasks with acceptance criteria and dependency ordering
+name: "计划"
+name_en: "Plan"
+description: "当用户需要拆分工作时使用此 skill"
+description_en: "Break work into small verifiable tasks with acceptance criteria and dependency ordering"
 ---
 
 Invoke the agent-skills:planning-and-task-breakdown skill.

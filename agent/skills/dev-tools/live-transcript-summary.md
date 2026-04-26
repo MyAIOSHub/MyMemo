@@ -1,6 +1,8 @@
 ---
-name: live-transcript-summary
-description: 边听边总结：实时监听当前 WPS 笔记中的音频转写，每 60 秒自动循环一次，识别场景后按对应模板整理内容，并写回笔记。当用户提到正在录音、开会、听课、听播客、做采访、开始录制，或者希望 AI 帮忙整理、总结、记录当前正在发生的内容时使用此 skill。也适用于用户说「帮我跟着听」「你帮我记」「边听边整理」「录完帮我整理」「实时帮我总结」，或在笔记中输入 *** 希望 AI 结合录音补全内容的场景。
+name: "边听边总结"
+name_en: "Live Summary Skill"
+description: "当用户录音、开会、听课时使用此 skill，实时总结音频内容。"
+description_en: "Use when user records, attends meetings, or listens to classes, real-time audio summary."
 metadata:
   author: Yicheng Xu
   version: "2.3.0"

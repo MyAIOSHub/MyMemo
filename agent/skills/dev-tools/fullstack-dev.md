@@ -1,6 +1,8 @@
 ---
-name: fullstack-dev
-description: |
+name: "全栈开发"
+name_en: "Full-Stack Development"
+description: "|"
+description_en: "Practices for building and maintaining full-stack applications"
   Full-stack backend architecture and frontend-backend integration guide.
   TRIGGER when: building a full-stack app, creating REST API with frontend, scaffolding backend service,
   building todo app, building CRUD app, building real-time app, building chat app,

@@ -1,6 +1,8 @@
 ---
-name: ljg-roundtable
-description: >-
+name: "ljg-roundtable"
+name_en: "Ljg Roundtable"
+description: ">-"
+description_en: ">-"
   Structured roundtable discussion framework with a truth-seeking moderator
   who invites representative figures for dialectical debate on any topic.
   Use when user says "圆桌讨论", "圆桌", "roundtable", "辩论",

@@ -1,6 +1,8 @@
 ---
-name: writing-plans
-description: Use when you have a spec or requirements for a multi-step task, before touching code
+name: "写作计划"
+name_en: "Writing Plans"
+description: "当用户需要执行多步骤任务前，有规格或需求时使用此 skill"
+description_en: "Use when you have a spec or requirements for a multi-step task, before touching code"
 ---
 
 # Writing Plans

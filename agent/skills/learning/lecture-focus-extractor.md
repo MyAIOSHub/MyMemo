@@ -1,7 +1,9 @@
 ---
-name: lecture-focus-extractor
+name: "课堂重点提取器"
+name_en: "Lecture Focus Extractor"
+description: "当用户有长课堂笔记需提取重点时使用此技能。"
+description_en: "Use when user has long class notes and needs key points extracted."
 author: Loki Mao (赛博小熊猫 Loki)
-description: 当用户手上已经有一篇较长的课堂笔记、逐字稿或学习记录，但只想提取最值得复习的重点时使用此 Skill。适合课程录音整理、复习提纲抽取、考前过重点、快速补课等场景。
 ---
 
 # WPS Lecture Focus Extractor 2.0

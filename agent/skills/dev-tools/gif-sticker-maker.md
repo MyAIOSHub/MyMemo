@@ -1,6 +1,8 @@
 ---
-name: gif-sticker-maker
-description: |
+name: "GIF贴纸制作"
+name_en: "GIF Sticker Maker"
+description: "|"
+description_en: "Quickly convert videos or images into shareable GIF stickers"
   Convert photos (people, pets, objects, logos) into 4 animated GIF stickers with captions.
   Use when: user wants to create cartoon stickers, GIF expressions, emoji packs, animated avatars,
   or convert photos to Funko Pop / Pop Mart blind box style animations.

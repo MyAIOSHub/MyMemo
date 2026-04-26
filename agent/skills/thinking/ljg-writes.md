@@ -1,6 +1,8 @@
 ---
-name: ljg-writes
+name: "写作引擎"
+name_en: "Writing Engine"
 description: "写作引擎。带着一个观点出发，在写的过程中把它想透。"
+description_en: "Start with an idea and think it through while writing."
 user_invocable: true
 version: "4.1.0"
 ---

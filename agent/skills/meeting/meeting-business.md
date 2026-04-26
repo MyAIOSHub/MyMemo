@@ -1,3 +1,9 @@
+---
+name: "商业意义"
+name_en: "Business Sense"
+description: "判断做出来有没有意义，而不是能不能做出来"
+description_en: "Judge whether building it actually matters, not just whether you can"
+---
 # meeting-business
 
 目标：判断做出来有没有意义，而不是能不能做出来。

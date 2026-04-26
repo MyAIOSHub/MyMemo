@@ -1,6 +1,8 @@
 ---
-name: ljg-skill-map
-description: "Skill map viewer. Scans all installed skills and renders a visual overview — name, version, description, category at a glance. Use when user says 'skills', '技能', '技能地图', 'skill map', '我有哪些技能', '看看技能', '列出技能', 'list skills'. Also trigger when user asks what skills are available or installed."
+name: "技能地图"
+name_en: "Skill Map"
+description: "当用户说‘技能’、‘技能地图’或询问可用技能时使用此 skill"
+description_en: "Use when user says 'skills', 'skill map', or asks about available skills"
 user_invocable: true
 version: "1.0.0"
 ---

@@ -1,6 +1,8 @@
 ---
-name: debugging-and-error-recovery
-description: Guides systematic root-cause debugging. Use when tests fail, builds break, behavior doesn't match expectations, or you encounter any unexpected error. Use when you need a systematic approach to finding and fixing the root cause rather than guessing.
+name: "调试与恢复"
+name_en: "Debugging and Error Recovery"
+description: "当用户测试失败时使用此 skill 进行系统性调试。"
+description_en: "Use when tests fail to guide systematic debugging."
 ---
 
 # Debugging and Error Recovery

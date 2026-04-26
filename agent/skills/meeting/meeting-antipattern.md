@@ -1,3 +1,9 @@
+---
+name: "反模式识别"
+name_en: "Anti-pattern Detection"
+description: "指出正在重复发生的坏模式"
+description_en: "Surface bad patterns that keep recurring"
+---
 # meeting-antipattern
 
 目标：指出正在重复发生的坏模式。

@@ -1,6 +1,8 @@
 ---
-name: dbs
-description: |
+name: "数据库工具箱"
+name_en: "DB Tools"
+description: "|"
+description_en: "A set of practical tools for database management and operations"
   dontbesilent 商业工具箱主入口。根据你的问题自动路由到最合适的诊断工具。
   触发方式：/dbs、/商业、「帮我看看」
   Main entry point for dontbesilent business toolkit. Routes to the right diagnostic skill.

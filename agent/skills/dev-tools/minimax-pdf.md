@@ -1,6 +1,8 @@
 ---
-name: minimax-pdf
-description: >
+name: "Minimax PDF"
+name_en: "Minimax PDF"
+description: ">"
+description_en: "Tool for processing and analyzing PDF files"
   Use this skill when visual quality and design identity matter for a PDF.
   CREATE (generate from scratch): "make a PDF", "generate a report", "write a proposal",
   "create a resume", "beautiful PDF", "professional document", "cover page",

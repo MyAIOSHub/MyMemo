@@ -1,5 +1,8 @@
 ---
-name: minimax-docx
+name: "minimax-docx"
+name_en: "Minimax Docx"
+description: ">"
+description_en: ">"
 license: MIT
 metadata:
   version: "1.0.0"
@@ -10,7 +13,6 @@ metadata:
     - "GB/T 9704-2012 Layout Standard for Official Documents"
     - "IEEE / ACM / APA / MLA / Chicago / Turabian Style Guides"
     - "Springer LNCS / Nature / HBR Document Templates"
-description: >
   Professional DOCX document creation, editing, and formatting using OpenXML SDK (.NET).
   Three pipelines: (A) create new documents from scratch, (B) fill/edit content in existing
   documents, (C) apply template formatting with XSD validation gate-check.

@@ -1,6 +1,8 @@
 ---
-name: sdd
-description: >
+name: "场景开发"
+name_en: "SDD"
+description: ">"
+description_en: "Develop based on specific scenario requirements"
   场景驱动开发（Scenario-Driven Development）。动手之前，先想清楚三层：场景是什么、用户真正需要什么、我在这个场景里是什么角色。
   适用于：启动新项目、从零设计功能、方向不明确需要先想清楚、产出的东西"逻辑没错但不对味"、不知道是给谁用的、需求模糊但被要求马上动手、做完了用户说"不是我要的"。
   当用户表达类似意图时触发——不限于特定措辞。常见表达举例："SDD一下"、"想想场景"、"设身处地想想"、"这个是给谁用的"、"用户会怎么用"、"先别急着做，想想为什么"、"需求不太清楚"、"总觉得哪里不对"、"做之前先想想"。

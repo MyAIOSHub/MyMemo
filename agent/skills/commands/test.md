@@ -1,5 +1,8 @@
 ---
-description: Run TDD workflow — write failing tests, implement, verify. For bugs, use the Prove-It pattern.
+name: "测试"
+name_en: "Test"
+description: "当用户需要执行TDD流程时使用此skill。"
+description_en: "Run TDD workflow — write failing tests, implement, verify. For bugs, use the Prove-It pattern."
 ---
 
 Invoke the agent-skills:test-driven-development skill.

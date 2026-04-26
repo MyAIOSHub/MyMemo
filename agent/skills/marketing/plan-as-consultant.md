@@ -1,6 +1,8 @@
 ---
-name: plan-as-consultant
-description: "Plan a business research study the way a professional consultant would — selecting the right analytical framework (JTBD, KANO, STP, GE-McKinsey, etc.), designing the research method, and defining a specific actionable output. Use this skill when someone has a business question to research: product decisions, user understanding, market analysis, pricing strategy, brand positioning, feature prioritization, or competitive strategy. Triggers on phrases like 'how do I research this', 'help me plan a study', 'what framework should I use', 'I need to understand my users or market', or any request to structure business research."
+name: "咨询式规划"
+name_en: "Plan as Consultant"
+description: "当用户需要规划商业研究时使用此 skill，选择合适分析框架并设计研究方法。"
+description_en: "Use when someone needs to plan a business research study, select the right analytical framework and design research methods."
 ---
 
 # Plan as Consultant

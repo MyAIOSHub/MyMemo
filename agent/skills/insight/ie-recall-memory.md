@@ -1,7 +1,9 @@
 ---
-name: insight-recaller
+name: "WPS 智能回忆"
+name_en: "WPS Insight Recaller 2.0"
+description: "当用户在WPS写新内容或整理思路时使用此skill。"
+description_en: "Use when users write new content or organize thoughts in WPS."
 author: Loki Mao (赛博小熊猫 Loki)
-description: 当用户在 WPS 里写新内容、做专题复习、准备讲稿或整理研究思路时，希望把过去真正有用的旧笔记重新召回到眼前，就使用此 Skill。它更适合“现在最该想起什么”，而不是做完整的笔记建链。
 ---
 
 # WPS Insight Recaller 2.0

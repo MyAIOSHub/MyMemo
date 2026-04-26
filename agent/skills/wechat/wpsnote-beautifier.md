@@ -1,6 +1,8 @@
 ---
-name: wpsnote-beautifier
-description: 智能美化 WPS 笔记文档，采用克制统一的配色风格（全文仅1种主色调，不混用多色系）。核心能力：优化标题层级结构、用高亮块强调核心结论与注意事项、用分栏展示对比或并列内容、应用统一配色方案并写入。仅当用户明确表达美化需求时才触发，例如：美化笔记、排版优化、文档美化、笔记排版、WPS笔记美化、智能排版、文档结构调整、加颜色、加高亮、加分栏、让笔记好看点、优化文档格式、笔记太丑了、调整排版、加点样式、给笔记润色、整理笔记格式、提升可读性。不要在用户仅要求写入内容、编辑文字、总结归纳等非美化场景下主动触发此skill。通过 user-wpsnote MCP 服务操作 WPS 笔记文档。
+name: "WPS 笔记美化"
+name_en: "WPS Note Beautifier"
+description: "当用户要求美化WPS笔记时使用此skill"
+description_en: "Intelligently beautify WPS note documents with a consistent color scheme, optimized layout, and enhanced readability."
 metadata:
   author: huziyu
   version: 1.0.0

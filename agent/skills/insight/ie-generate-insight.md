@@ -1,6 +1,8 @@
 ---
-name: ie-generate-insight
-description: 将推理分析结果转化为可阅读的洞见文本，生成下一步探索建议，展示想法的演化路径。当用户提到"生成洞见"、"给我灵感"、"启发我"、"下一步探索什么"、"想法是怎么演变的"等需要从分析结果中提炼启发性内容的场景时使用此技能。此技能属于灵感引擎（ie-）洞见层，专门负责将结构化推理结果转化为人类可读的灵感内容，不涉及笔记检索或关系分析。
+name: "洞见生成"
+name_en: "Insight Generator"
+description: "当用户需要从分析结果中提炼启发性内容时使用此技能。"
+description_en: "Use when users need to extract inspirational content from analysis."
 ---
 
 # 洞见层：灵感生成与探索建议

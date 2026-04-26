@@ -1,7 +1,9 @@
 ---
-name: notes-to-lesson-plan
+name: "笔记转教案"
+name_en: "Notes to Lesson Plan"
+description: "当用户希望将学习笔记转为讲解结构时使用此技能。"
+description_en: "Use when users want to turn study notes into a lesson structure."
 author: Loki Mao (赛博小熊猫 Loki)
-description: 当用户希望把 WPS 学习笔记整理成一份可讲给别人听的讲解结构、迷你教案或 teach-back 提纲时使用此 Skill。它不仅适合老师，也适合自学者用“能不能讲出来”来检验自己是否真正掌握。
 ---
 
 # WPS Notes to Lesson Plan 2.0

@@ -1,6 +1,8 @@
 ---
-name: atypica-user-interview
-description: Run AI-simulated user interviews and focus group discussions using atypica.ai's library of human-like personas. Each persona is an AI that behaves like a real person — with a specific background, personality, and opinions. Use this skill whenever you need user research, product feedback, UX testing, or want to understand what different types of real people think, feel, or would do — without recruiting actual participants. Trigger on phrases like "interview users", "ask real people", "focus group", "user research", "talk to users", "get user feedback", "simulate interviews", "test with users", or any request to gather qualitative human insights.
+name: "用户访谈与讨论"
+name_en: "User Interview & Discussion"
+description: "当用户需要用户研究时使用此 skill"
+description_en: "Use when users need user research"
 ---
 
 # atypica User Interview & Discussion

@@ -1,5 +1,8 @@
 ---
-description: Simplify code for clarity and maintainability — reduce complexity without changing behavior
+name: "代码简化"
+name_en: "code-simplify"
+description: "当用户需要简化代码以提高可读性和可维护性时使用此 skill"
+description_en: "Simplify code for clarity and maintainability — reduce complexity without changing behavior"
 ---
 
 Invoke the agent-skills:code-simplification skill.

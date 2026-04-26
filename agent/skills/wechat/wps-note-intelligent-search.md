@@ -1,6 +1,8 @@
 ---
-name: wps-deep-search
-description: |
+name: "段落速读"
+name_en: "Paragraph Reading"
+description: "|"
+description_en: "Quickly locate and read specific paragraphs in a document"
   【深度搜索】深挖笔记关联，构建知识图谱的 WPS 笔记查询助手。
   当用户说"深度搜索""帮我深挖""关联查询""全面梳理"时使用。
   支持跨笔记关联挖掘、语义发散扩展、知识沉淀，不同于简单关键词匹配。

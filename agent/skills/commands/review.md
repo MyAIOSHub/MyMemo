@@ -1,5 +1,8 @@
 ---
-description: Conduct a five-axis code review — correctness, readability, architecture, security, performance
+name: "代码评审"
+name_en: "Review"
+description: "当用户需要进行代码评审时使用此 skill"
+description_en: "Conduct a five-axis code review — correctness, readability, architecture, security, performance"
 ---
 
 Invoke the agent-skills:code-review-and-quality skill.

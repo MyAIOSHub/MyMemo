@@ -1,6 +1,8 @@
 ---
-name: writing-skills
-description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
+name: "写作技巧"
+name_en: "Writing Skills"
+description: "当用户创建新技能时使用此 skill"
+description_en: "Use when creating new skills, editing existing skills, or verifying skills work before deployment"
 ---
 
 # Writing Skills

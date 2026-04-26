@@ -1,6 +1,8 @@
 ---
-name: vision-analysis
-description: >
+name: "视觉分析"
+name_en: "Vision Analysis"
+description: ">"
+description_en: "Skill for image content understanding and analysis"
   Analyze, describe, and extract information from images using the MiniMax vision MCP tool.
   Use when: user shares an image file path or URL (any message containing .jpg, .jpeg, .png,
   .gif, .webp, .bmp, or .svg file extension) or uses any of these words/phrases near an image:

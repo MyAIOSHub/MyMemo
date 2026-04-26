@@ -1,6 +1,8 @@
 ---
-name: flutter-dev
-description: |
+name: "Flutter开发指南"
+name_en: "Flutter Development Guide"
+description: "|"
+description_en: "Practical tool for developers to build cross-platform apps"
   Flutter cross-platform development guide covering widget patterns, Riverpod/Bloc state management, GoRouter navigation, performance optimization, and platform-specific implementations. Includes const optimization, responsive layouts, testing strategies, and DevTools profiling.
   Use when: building Flutter apps, implementing state management (Riverpod/Bloc), setting up GoRouter navigation, creating custom widgets, optimizing performance, writing widget tests, cross-platform development.
 license: MIT

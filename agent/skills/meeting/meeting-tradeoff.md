@@ -1,3 +1,9 @@
+---
+name: "取舍分析"
+name_en: "Tradeoff Analysis"
+description: "把取舍说透，避免\"都想要\""
+description_en: "Make tradeoffs explicit, avoid wanting it all"
+---
 # meeting-tradeoff
 
 目标：把取舍说透，避免“都想要”。

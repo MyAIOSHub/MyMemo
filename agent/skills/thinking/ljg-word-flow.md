@@ -1,6 +1,8 @@
 ---
-name: ljg-word-flow
-description: "Word flow: deep-dive word analysis + infograph card in one go. Takes one or more English words, runs ljg-word (generates deep semantics analysis) then ljg-card -i (generates infograph PNG). Use when user says '词卡', 'word card', 'word flow', or provides English words wanting both analysis and visual card."
+name: "词卡"
+name_en: "Word Flow"
+description: "当用户说‘词卡’、‘word card’或‘word flow’时使用此 skill"
+description_en: "Use when user says 'word card', 'word flow', or provides English words wanting analysis and visual card."
 user_invocable: true
 version: "1.0.1"
 ---

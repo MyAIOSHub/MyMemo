@@ -1,6 +1,8 @@
 ---
-name: ljg-invest
-description: 投资分析, 生成一份深度投资分析报告。不做传统投资分析——核心判断是项目是否是一台「秩序创造机器」。Use when user says '投资报告', '投资分析', '分析这个项目', '写投资报告', 'investment report', 'invest analysis', or provides entrepreneur conversation records wanting investment evaluation. Also trigger when user pastes or references meeting notes, pitch decks, or founder interviews and asks for analysis.
+name: "投资报告"
+name_en: "Investment Report"
+description: "当用户需要投资报告或分析项目时使用此 skill"
+description_en: "Use when users need investment reports or project analysis"
 ---
 
 # 投资报告

@@ -1,6 +1,8 @@
 ---
-name: html-to-pdf
-description: >
+name: "html-to-pdf"
+name_en: "Html To Pdf"
+description: ">"
+description_en: ">"
   Convert an HTML file to a PDF using headless Chrome (Puppeteer) — the same approach
   atypica uses for its AI-generated research reports.
   Use this skill whenever the user wants to export an HTML file, report, or webpage snapshot

@@ -1,3 +1,9 @@
+---
+name: "发散选项"
+name_en: "Divergent Options"
+description: "在不失控的前提下拉开备选角度"
+description_en: "Spread alternatives without losing control"
+---
 # meeting-divergence
 
 目标：在不失控的前提下拉开备选角度。

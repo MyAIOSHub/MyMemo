@@ -1,6 +1,8 @@
 ---
-name: dbs-diagnosis
-description: |
+name: "商业诊断"
+name_en: "Business Diagnosis"
+description: "|"
+description_en: "Analyzes and evaluates the health and optimization directions of a business model"
   dontbesilent 商业模式诊断。两种模式：问诊（消解你的问题）和体检（拆解你的商业模式）。
   触发方式：/dbs-diagnosis、/问诊、「帮我看看商业模式」「诊断一下我的业务」「我有个商业问题」
   Business model diagnosis using dontbesilent's ontological framework. Two modes: consultation (dissolve your question) and checkup (analyze your business model).

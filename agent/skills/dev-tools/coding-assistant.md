@@ -1,6 +1,8 @@
 ---
-name: coding-assistant
-description: 多平台编码助手。遵循各平台官方文档做编码规范、单测与编译/lint；协助将核心技术梳理为完整 WPS 笔记技术文档。生成的笔记必须包含 7 个二级标题（核心技术、核心代码、关键技术点、核心类和职责、调用链、架构概览、注意事项）；其中架构、核心技术、调用链的图示优先用 WPS 笔记的 generate_image 根据描述生成图片再用 insert_image 插入。用户新增标题时根据诉求补充内容；用户未关闭当前笔记期间约 1 分钟后主动更新直至关闭。当用户使用 Cursor、Codex、Claude Code、AS code 且提到架构、设计图、核心方法、关键技术或技术文档时，自动读写在 WPS 笔记。先 list_notes 先查后编；核心代码可从注释、复制、剪切板、选中或指定函数获取。子 skill review-notes 与 reference 负责流程细节。每30s监控一个笔记内容是否变动，如果变动自动更新文档。
+name: "代码助手"
+name_en: "Code Helper"
+description: "当用户使用 Cursor、Codex 等代码工具时，生成技术文档并自动更新。"
+description_en: "Multi-platform code standardization and documentation tool that automatically updates technical documents with charts."
 ---
 
 # Coding Assistant（编码助手）
