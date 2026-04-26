@@ -348,25 +348,60 @@ class TestMemoryToItem:
 
 
 class TestSourceOriginInference:
+    """Origin classification + blocklist behavior.
+
+    Default config blocks `browser` and `claude_code`; for those, _memory_to_item
+    must return None. Unblocked origins (evermemo, sayso) come through normally.
+    """
+
     @pytest.mark.parametrize(
         "group_name,expected",
         [
-            ("MyBrowserTab", "browser"),
-            ("MyMemo Session", "browser"),
-            ("attention_capture", "browser"),
-            ("Claude Session", "claude_code"),
-            ("CC-session-1", "claude_code"),
             ("daily_review", "evermemo"),
             ("", "evermemo"),
+            ("sayso-meeting", "sayso"),
+            ("sayso-transcript", "sayso"),
         ],
     )
-    def test_origin(self, group_name, expected):
+    def test_origin_unblocked(self, group_name, expected):
         svc = MemoryService()
         item = svc._memory_to_item(
             {"id": "x", "summary": "S", "group_name": group_name},
             "episodic_memory",
         )
+        assert item is not None
         assert item["source_origin"] == expected
+
+    @pytest.mark.parametrize(
+        "group_name",
+        [
+            "MyBrowserTab",
+            "MyMemo Session",
+            "attention_capture",
+            "Claude Session",
+            "CC-session-1",
+        ],
+    )
+    def test_origin_blocked_by_default(self, group_name):
+        svc = MemoryService()
+        item = svc._memory_to_item(
+            {"id": "x", "summary": "S", "group_name": group_name},
+            "episodic_memory",
+        )
+        assert item is None, f"expected blocked origin for group_name={group_name!r}"
+
+    def test_blocklist_can_be_disabled(self, monkeypatch):
+        """Patching MEMORY_BLOCKED_ORIGINS to empty re-enables those origins."""
+        from api import memory_service as ms_mod
+
+        monkeypatch.setattr(ms_mod, "MEMORY_BLOCKED_ORIGINS", frozenset())
+        svc = ms_mod.MemoryService()
+        item = svc._memory_to_item(
+            {"id": "x", "summary": "S", "group_name": "MyBrowserTab"},
+            "episodic_memory",
+        )
+        assert item is not None
+        assert item["source_origin"] == "browser"
 
 
 if __name__ == "__main__":

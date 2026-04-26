@@ -6,12 +6,12 @@ Small helpers used across the memory-only backend.
 
 - **`chunking.py`** — `chunk_text`, `detect_content_type` (HTML / Markdown / plain). Content-type aware splitters via `langchain-text-splitters`. Default 1500-char chunks, 225-char overlap.
 - **`embedding.py`** — `generate_embedding` (single) / `generate_embeddings` (batched, default 50). Uses Esperanto embedding model. Handles content larger than chunk size via mean pooling for single-shot case.
-- **`encryption.py`** — Fernet encryption helpers (`encrypt_value`, `decrypt_value`). Requires `OPEN_NOTEBOOK_ENCRYPTION_KEY` env var. Derives a stable Fernet key via SHA-256 so callers can use a simple passphrase.
+- **`encryption.py`** — Fernet encryption helpers (`encrypt_value`, `decrypt_value`). Reads `MYMEMO_ENCRYPTION_KEY` (preferred) or `OPEN_NOTEBOOK_ENCRYPTION_KEY` (legacy, deprecation-warned). Derives a stable Fernet key via SHA-256 so callers can use a simple passphrase.
 - **`text_utils.py`** — `clean_thinking_content`, `parse_thinking_content`, `remove_non_ascii`, `remove_non_printable`.
 - **`token_utils.py`** — `token_count`, `token_cost` via tiktoken.
 - **`version_utils.py`** — `compare_versions`, `get_installed_version`, `get_version_from_github`.
 - **`error_classifier.py`** — `classify_error()` maps raw LLM provider exceptions to typed `OpenNotebookError` subclasses.
-- **`graph_utils.py`** — small `langchain_core.runnables` helpers (relic, kept for model provisioning).
+- **`memory_origin.py`** — `classify_origin()` + `blocked_origins_from_env()` shared between `api/memory_service.py` and `memory-hub-mcp/materializer.py` so the origin → label rules and `MEMORY_BLOCKED_ORIGINS` filter live in one place.
 
 ## Removed
 

@@ -22,3 +22,11 @@ os.makedirs(TIKTOKEN_CACHE_DIR, exist_ok=True)
 # MEMORY HUB
 MEMORY_HUB_URL = os.environ.get("MEMORY_HUB_URL", "http://localhost:1995")
 MEMORY_HUB_USER_ID = os.environ.get("MEMORY_HUB_USER_ID", "mymemo_user")
+
+# Origins to drop from browse/search/materialize results.
+# Default blocks the high-volume noisy sources; set MEMORY_BLOCKED_ORIGINS=""
+# to disable, or override with a comma-separated list.
+_blocked_raw = os.environ.get("MEMORY_BLOCKED_ORIGINS", "browser,claude_code")
+MEMORY_BLOCKED_ORIGINS = frozenset(
+    s.strip() for s in _blocked_raw.split(",") if s.strip()
+)

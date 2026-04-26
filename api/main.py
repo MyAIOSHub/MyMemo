@@ -68,6 +68,16 @@ async def lifespan(app: FastAPI):
             "Set MYMEMO_ENCRYPTION_KEY to any secret string."
         )
 
+    # Surface the resolved SurrealDB namespace + database. .env files copied
+    # from older forks may still pin SURREAL_NAMESPACE=open_notebook while
+    # docker-compose.yml uses mymemo, which silently splits data between the
+    # two paths. Logging the value lets operators catch the drift.
+    logger.info(
+        "SurrealDB target: namespace={ns} database={db}",
+        ns=os.environ.get("SURREAL_NAMESPACE", "<default>"),
+        db=os.environ.get("SURREAL_DATABASE", "<default>"),
+    )
+
     # Run database migrations
 
     try:
@@ -91,15 +101,6 @@ async def lifespan(app: FastAPI):
         logger.exception(e)
         # Fail fast - don't start the API with an outdated database schema
         raise RuntimeError(f"Failed to run database migrations: {str(e)}") from e
-
-    # Run podcast profile data migration (legacy strings -> Model registry)
-    try:
-        from open_notebook.podcasts.migration import migrate_podcast_profiles
-
-        await migrate_podcast_profiles()
-    except Exception as e:
-        logger.warning(f"Podcast profile migration encountered errors: {e}")
-        # Non-fatal: profiles can be migrated manually via UI
 
     logger.success("API initialization completed successfully")
 

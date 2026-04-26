@@ -16,10 +16,10 @@ class CommandService:
     ) -> str:
         """Submit a generic command job for background processing"""
         try:
-            # Ensure command modules are imported before submitting
-            # This is needed because submit_command validates against local registry
+            # Ensure command modules are imported before submitting so
+            # surreal-commands' local registry contains them.
             try:
-                import commands.podcast_commands  # noqa: F401
+                import commands.embedding_commands  # noqa: F401
             except ImportError as import_err:
                 logger.error(f"Failed to import command modules: {import_err}")
                 raise ValueError("Command modules not available")

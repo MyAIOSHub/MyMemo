@@ -7,7 +7,12 @@ from urllib.parse import urlparse
 import httpx
 from loguru import logger
 
-from open_notebook.config import MEMORY_HUB_URL, MEMORY_HUB_USER_ID
+from open_notebook.config import (
+    MEMORY_BLOCKED_ORIGINS,
+    MEMORY_HUB_URL,
+    MEMORY_HUB_USER_ID,
+)
+from open_notebook.utils.memory_origin import classify_origin
 
 
 def _safe_host(url: str) -> str:
@@ -63,19 +68,22 @@ class MemoryService:
             return {
                 "connected": resp.status_code < 400,
                 "status_code": resp.status_code,
-                "url": self.base_url,
+                "url": _safe_host(self.base_url),
             }
         except Exception as e:
             # Log host only — full URL may carry creds or internal topology.
+            safe_host = _safe_host(self.base_url)
             logger.warning(
                 "Memory Hub not reachable at host {host}: {err}",
-                host=_safe_host(self.base_url),
+                host=safe_host,
                 err=e,
             )
+            # Same reasoning applies to the JSON response — never leak the
+            # raw base_url to API clients (it may embed http://user:pass@…).
             return {
                 "connected": False,
                 "error": str(e),
-                "url": self.base_url,
+                "url": safe_host,
             }
 
     async def browse_memories(
@@ -144,7 +152,7 @@ class MemoryService:
                 "has_more": (offset + raw_count) < total,
             }
         except httpx.HTTPError as e:
-            logger.error(f"Failed to browse memories: {e}")
+            logger.error("Failed to browse memories: {}", e)
             raise
 
     async def search_memories(
@@ -195,7 +203,7 @@ class MemoryService:
                 "has_more": False,
             }
         except httpx.HTTPError as e:
-            logger.error(f"Failed to search memories: {e}")
+            logger.error("Failed to search memories: {}", e)
             raise
 
     # ------------------------------------------------------------------
@@ -240,15 +248,13 @@ class MemoryService:
             content = summary or mem.get("content", "") or episode
             title = subject or content[:100] or memory_type
 
-        # Derive source origin from group_name when available.
-        source_origin = "evermemo"
+        # Derive source origin from group_name + drop blocked origins.
+        # Both rules live in open_notebook.utils.memory_origin so the
+        # materializer (separate sub-package) can re-use the same logic.
         group_name = mem.get("group_name") or ""
-        if group_name:
-            gn = group_name.lower()
-            if "browser" in gn or "mymemo" in gn or "attention" in gn:
-                source_origin = "browser"
-            elif "claude" in gn or "cc" in gn:
-                source_origin = "claude_code"
+        source_origin = classify_origin(group_name)
+        if source_origin in MEMORY_BLOCKED_ORIGINS:
+            return None
 
         # Score is inlined in the item under v1 (not in a separate scores[] array).
         score = mem.get("score")

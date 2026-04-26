@@ -185,7 +185,8 @@ def decrypt_value(value: str) -> str:
             # Looks like encrypted data but failed to decrypt - likely wrong key
             raise ValueError(
                 "Decryption failed: data appears to be encrypted but key is incorrect. "
-                "Check OPEN_NOTEBOOK_ENCRYPTION_KEY configuration."
+                "Check MYMEMO_ENCRYPTION_KEY configuration "
+                "(legacy OPEN_NOTEBOOK_ENCRYPTION_KEY is also accepted)."
             )
         # Not a valid token - treat as legacy plaintext
         return value
