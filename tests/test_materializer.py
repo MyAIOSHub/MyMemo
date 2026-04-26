@@ -172,6 +172,58 @@ def test_recent_focus_skips_unparseable_timestamps():
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# _safe_project_key — HIGH#28/#29 lockdown for path traversal + prompt injection
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "raw,expected_prefix",
+    [
+        ("mymemo", "mymemo"),
+        ("My Project", "my-project"),
+        ("USER-PREFS", "user-prefs"),
+    ],
+)
+def test_safe_project_key_clean_inputs(raw, expected_prefix):
+    assert materializer._safe_project_key(raw) == expected_prefix
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "../../../etc/passwd",
+        "../../.ssh/authorized_keys",
+        "/absolute/path",
+        "..\\windows\\evil",
+        "$(rm -rf /)",
+        "key with\nnewline",
+        "key\x00null",
+    ],
+)
+def test_safe_project_key_blocks_traversal(raw):
+    """LLM-controlled keys can't escape the output directory or smuggle nulls."""
+    out = materializer._safe_project_key(raw)
+    assert "/" not in out
+    assert "\\" not in out
+    assert "\n" not in out
+    assert ".." not in out
+    assert "\x00" not in out
+    # The result must always match the strict pattern.
+    assert materializer._PROJECT_KEY_PATTERN.match(out)
+
+
+def test_safe_project_key_falls_back_to_misc_for_empty():
+    assert materializer._safe_project_key(None) == "misc"
+    assert materializer._safe_project_key("") == "misc"
+    assert materializer._safe_project_key("!!!") == "misc"
+
+
+def test_safe_project_key_truncates_long_input():
+    out = materializer._safe_project_key("a" * 500)
+    assert len(out) <= 80
+
+
 def test_fetch_all_episodes_drops_blocked(monkeypatch):
     """Blocked origins (browser/claude_code) must not survive fetch."""
     page1 = {

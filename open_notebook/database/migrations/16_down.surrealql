@@ -1,1 +1,4 @@
-DELETE transformation WHERE name IN ['audio-overview', 'mind-map', 'flashcards', 'faq', 'study-guide', 'presentation', 'video-summary', 'data-table', 'infographic'];
+-- Migration 16 down — DEPRECATED, intentional no-op.
+-- See migrations/16.surrealql for context. The original DELETE removed
+-- transformation seeds that are no longer inserted.
+SELECT 0;

@@ -19,7 +19,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
+import re
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -28,9 +30,30 @@ from typing import Any
 
 import httpx
 
-import logging
-
 logger = logging.getLogger(__name__)
+
+# Allowed shape for project keys returned by the LLM classifier. Anything
+# outside this character set is rejected — the key flows directly into
+# `(output_dir / f"{project_key}.md").write_text(...)` so a hostile or
+# malformed key would be a path-traversal vector.
+_PROJECT_KEY_PATTERN = re.compile(r"^[a-z0-9_-]{1,80}$")
+
+
+def _safe_project_key(raw: str | None, fallback: str = "misc") -> str:
+    """Coerce an LLM-returned project key into a filesystem-safe slug.
+
+    Lowercase, replace any non-[a-z0-9_-] run with a single dash, trim to
+    80 chars, and fall back to ``misc`` if nothing usable survives. Used
+    for both the classifier output and any group_name-derived fallback so
+    a single chokepoint protects every write_text call-site.
+    """
+    if not raw:
+        return fallback
+    cleaned = re.sub(r"[^a-z0-9_-]+", "-", str(raw).lower()).strip("-")
+    cleaned = cleaned[:80] or fallback
+    if not _PROJECT_KEY_PATTERN.match(cleaned):
+        return fallback
+    return cleaned
 
 
 # ---------------------------------------------------------------------------
@@ -243,12 +266,14 @@ def classify_episodes(episodes: list[dict]) -> dict[str, list[dict]]:
         )
         mapping = {}
 
-    # Build buckets
+    # Build buckets. The `project` value flows into a filename, so every
+    # branch must hand off through `_safe_project_key`. This blocks both
+    # adversarial LLM output (path traversal via "../../etc/passwd") and
+    # accidental bad characters in group_name.
     buckets: dict[str, list[dict]] = defaultdict(list)
     for i, ep in enumerate(episodes[:200]):
         project = mapping.get(str(i))
         if not project:
-            # Fallback: derive from group_name
             gn = (ep.get("group_name") or "").lower()
             if "mymemo" in gn or "open-notebook" in gn or "notebook" in gn:
                 project = "mymemo"
@@ -256,7 +281,8 @@ def classify_episodes(episodes: list[dict]) -> dict[str, list[dict]]:
                 project = "myteam"
             else:
                 project = "misc"
-        buckets[f"project-{project}"].append(ep)
+        safe = _safe_project_key(project)
+        buckets[f"project-{safe}"].append(ep)
 
     # Remaining episodes beyond 200 go to misc
     for ep in episodes[200:]:
@@ -396,7 +422,7 @@ def generate_recent_focus(episodes: list[dict]) -> str:
 def generate_index(output_dir: Path) -> str:
     """Generate INDEX.md listing all .md files with one-line summaries."""
     lines = ["# Memory Documents Index\n",
-             f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"]
+             f"Last updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"]
     for md_file in sorted(output_dir.glob("*.md")):
         if md_file.name == "INDEX.md":
             continue
