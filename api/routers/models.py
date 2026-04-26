@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from api.models import (
     DefaultModelsResponse,
+    DiscoveredModelResponse,
     ModelCreate,
     ModelResponse,
     ProviderAvailabilityResponse,
@@ -31,15 +32,6 @@ router = APIRouter()
 # =============================================================================
 # Model Discovery Response Models
 # =============================================================================
-
-
-class DiscoveredModelResponse(BaseModel):
-    """Response model for a discovered model."""
-
-    name: str
-    provider: str
-    model_type: str
-    description: Optional[str] = None
 
 
 class ProviderSyncResponse(BaseModel):

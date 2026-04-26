@@ -251,3 +251,33 @@ def test_fetch_new_audios_drops_blank_and_old(tmp_path: Path):
 def test_open_ro_missing_file(tmp_path: Path):
     with pytest.raises(FileNotFoundError):
         import_sayso._open_ro(tmp_path / "nope.sqlite3")
+
+
+# ---------------------------------------------------------------------------
+# _validate_hub_url — MED#32 lockdown for SSRF on link-local addresses
+# ---------------------------------------------------------------------------
+
+
+def test_validate_hub_url_accepts_localhost_and_lan():
+    # Should not raise — both are allowed for self-hosted deploys.
+    import_sayso._validate_hub_url("http://localhost:1995")
+    import_sayso._validate_hub_url("http://127.0.0.1:1995")
+    import_sayso._validate_hub_url("http://192.168.1.10:1995")
+
+
+def test_validate_hub_url_blocks_link_local_metadata():
+    """169.254.169.254 is the canonical cloud-metadata endpoint; refuse it."""
+    with pytest.raises(ValueError, match="link-local"):
+        import_sayso._validate_hub_url("http://169.254.169.254/latest/meta-data/")
+
+
+def test_validate_hub_url_rejects_bad_scheme():
+    with pytest.raises(ValueError, match="scheme"):
+        import_sayso._validate_hub_url("file:///etc/passwd")
+    with pytest.raises(ValueError, match="scheme"):
+        import_sayso._validate_hub_url("gopher://attacker.example/")
+
+
+def test_validate_hub_url_rejects_no_hostname():
+    with pytest.raises(ValueError, match="hostname"):
+        import_sayso._validate_hub_url("http://")

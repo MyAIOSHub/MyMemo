@@ -79,6 +79,7 @@ Memory Hub stack runs separately (vendored EverMemOS + DashScope patches).
 - **[commands/CLAUDE.md](commands/CLAUDE.md)**: Surreal-commands (embed_source, rebuild_embeddings)
 - **[agent/](agent/)**: Agent system, skills, meeting mode
 - **[memory-hub-mcp/README.md](memory-hub-mcp/README.md)**: MCP server + materializer
+- **[scripts/import_sayso.py](scripts/import_sayso.py)**: Pull meetings + voice transcripts from `~/.config/ai.sayso.app/db.sqlite3` into EverCore as `sayso-meeting` / `sayso-transcript` group memories. Idempotent watermark in `data/sayso-import.state`.
 
 ---
 

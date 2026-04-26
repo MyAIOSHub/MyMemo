@@ -68,19 +68,22 @@ class MemoryService:
             return {
                 "connected": resp.status_code < 400,
                 "status_code": resp.status_code,
-                "url": self.base_url,
+                "url": _safe_host(self.base_url),
             }
         except Exception as e:
             # Log host only — full URL may carry creds or internal topology.
+            safe_host = _safe_host(self.base_url)
             logger.warning(
                 "Memory Hub not reachable at host {host}: {err}",
-                host=_safe_host(self.base_url),
+                host=safe_host,
                 err=e,
             )
+            # Same reasoning applies to the JSON response — never leak the
+            # raw base_url to API clients (it may embed http://user:pass@…).
             return {
                 "connected": False,
                 "error": str(e),
-                "url": self.base_url,
+                "url": safe_host,
             }
 
     async def browse_memories(
@@ -149,7 +152,7 @@ class MemoryService:
                 "has_more": (offset + raw_count) < total,
             }
         except httpx.HTTPError as e:
-            logger.error(f"Failed to browse memories: {e}")
+            logger.error("Failed to browse memories: {}", e)
             raise
 
     async def search_memories(
@@ -200,7 +203,7 @@ class MemoryService:
                 "has_more": False,
             }
         except httpx.HTTPError as e:
-            logger.error(f"Failed to search memories: {e}")
+            logger.error("Failed to search memories: {}", e)
             raise
 
     # ------------------------------------------------------------------

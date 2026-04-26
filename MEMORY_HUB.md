@@ -43,9 +43,9 @@ Deleting a memory-sourced `Source` inside Open Notebook **does not** cascade to 
 - Import one session: `POST /cc/api/session/{session_id}/import`
 - Status: `GET /cc/api/sync/status`
 
-## MCP (optional — not bundled)
+## MCP
 
-If you wire up an MCP server pointing at this hub, expose `search_memories` and `recent_memories` backed by `http://127.0.0.1:1995/api/v1/memories/search` and `/api/v1/memories/get` respectively. (No MCP example file is shipped with this repo today.)
+The bundled MCP server lives at [memory-hub-mcp/memory_hub_mcp.py](./memory-hub-mcp/memory_hub_mcp.py). It exposes `search_memories`, `recent_memories`, and a `materialize` tool (which calls into [memory-hub-mcp/materializer.py](./memory-hub-mcp/materializer.py) to render `user-preferences.md`, `recent-focus.md`, and `project-*.md`). Wire it into any MCP-aware client over stdio — see [memory-hub-mcp/README.md](./memory-hub-mcp/README.md) for the connection snippet.
 
 ## Upgrading the vendored EverCore source
 

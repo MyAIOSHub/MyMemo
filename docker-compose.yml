@@ -19,7 +19,9 @@ services:
     environment:
       # REQUIRED: Fernet-safe secret for encrypting stored credentials.
       # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-      - OPEN_NOTEBOOK_ENCRYPTION_KEY=${OPEN_NOTEBOOK_ENCRYPTION_KEY:?set this in .env}
+      # Falls back to the legacy OPEN_NOTEBOOK_ENCRYPTION_KEY name with a
+      # deprecation warning if MYMEMO_ENCRYPTION_KEY isn't set.
+      - MYMEMO_ENCRYPTION_KEY=${MYMEMO_ENCRYPTION_KEY:-${OPEN_NOTEBOOK_ENCRYPTION_KEY:?set MYMEMO_ENCRYPTION_KEY in .env}}
 
       # Memory Hub URL — point to the EverCore gateway on port 1995.
       # Leave as localhost if Memory Hub runs on the host; override for remote.

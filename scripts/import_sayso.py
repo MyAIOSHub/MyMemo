@@ -26,16 +26,20 @@ Env (overridable by CLI flags):
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import logging
 import os
+import socket
 import sqlite3
 import sys
 import time
 from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from types import TracebackType
+from typing import Any, Iterator
+from urllib.parse import urlparse
 
 import httpx
 
@@ -82,16 +86,19 @@ class Watermark:
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(
-            json.dumps(
-                {
-                    "meetings_max_updated_at_ms": self.meetings_max_updated_at_ms,
-                    "audios_max_created_at_s": self.audios_max_created_at_s,
-                },
-                indent=2,
-            ),
-            encoding="utf-8",
+        # Owner-only perms — the watermark reveals import timing + record
+        # counts, which is mildly sensitive on multi-user hosts. 0o600 stays
+        # consistent across atomic-rename + cron re-runs.
+        body = json.dumps(
+            {
+                "meetings_max_updated_at_ms": self.meetings_max_updated_at_ms,
+                "audios_max_created_at_s": self.audios_max_created_at_s,
+            },
+            indent=2,
         )
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(body)
         tmp.replace(path)
 
 
@@ -102,6 +109,48 @@ class Watermark:
 
 class SaysoDBUnavailable(RuntimeError):
     """Raised when the say-so SQLite file cannot be opened for reading."""
+
+
+def _validate_hub_url(url: str) -> None:
+    """Reject obviously dangerous hub URLs.
+
+    Cloud metadata endpoints live on the link-local 169.254.0.0/16 range
+    and would let a hostile env var redirect every group_add POST to
+    instance-credential APIs. Loopback + RFC1918 stay allowed because the
+    hub is, by design, self-hosted on localhost or a LAN address.
+    """
+    try:
+        parsed = urlparse(url)
+    except ValueError as e:
+        raise ValueError(f"invalid --hub-url {url!r}: {e}") from e
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"--hub-url scheme must be http(s); got {parsed.scheme!r}")
+    host = parsed.hostname
+    if not host:
+        raise ValueError(f"--hub-url {url!r} has no hostname")
+
+    candidates: list[str] = []
+    try:
+        ipaddress.ip_address(host)
+        candidates.append(host)
+    except ValueError:
+        # Hostname — resolve once and check every returned address.
+        try:
+            for _, _, _, _, sockaddr in socket.getaddrinfo(host, None):
+                candidates.append(sockaddr[0])
+        except socket.gaierror:
+            return  # Unresolvable hostnames fail later in HTTP; not our job.
+
+    for cand in candidates:
+        try:
+            ip = ipaddress.ip_address(cand)
+        except ValueError:
+            continue
+        if ip.is_link_local:
+            raise ValueError(
+                f"--hub-url {url!r} resolves to link-local address {cand}; "
+                "refusing to send memories to a cloud metadata endpoint."
+            )
 
 
 def _open_ro(db_path: Path) -> sqlite3.Connection:
@@ -199,7 +248,12 @@ class HubClient:
     def __enter__(self) -> "HubClient":
         return self
 
-    def __exit__(self, *exc: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self._client.close()
 
     def group_add(
@@ -344,7 +398,7 @@ def _audio_to_message(audio: dict[str, Any], user_id: str) -> dict[str, Any]:
     }
 
 
-def _chunked(items: list[Any], size: int) -> Iterable[list[Any]]:
+def _chunked(items: list[Any], size: int) -> Iterator[list[Any]]:
     for i in range(0, len(items), size):
         yield items[i : i + size]
 
@@ -478,6 +532,12 @@ def main() -> int:
 
     if not args.db.exists():
         logger.error("DB not found: %s", args.db)
+        return 1
+
+    try:
+        _validate_hub_url(args.hub_url)
+    except ValueError as e:
+        logger.error(str(e))
         return 1
 
     watermark = Watermark() if args.reset else Watermark.load(args.state)
