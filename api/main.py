@@ -32,6 +32,7 @@ from api.routers import (
     embedding_rebuild,
     memories,
     models,
+    personalization,
     settings,
     sources,
 )
@@ -294,6 +295,7 @@ app.include_router(sources.router, prefix="/api", tags=["sources"])
 app.include_router(commands_router.router, prefix="/api", tags=["commands"])
 app.include_router(credentials.router, prefix="/api", tags=["credentials"])
 app.include_router(memories.router, prefix="/api", tags=["memories"])
+app.include_router(personalization.router, prefix="/api", tags=["personalization"])
 
 
 @app.get("/")
